@@ -139,6 +139,22 @@ template on either platform:
 - Tokens live in `lib/theme/app_theme.dart`; extra colours the Material
   `ColorScheme` has no slot for hang off an `AppPalette` theme extension.
 
+### App icon
+
+The icon — a receipt slip with a torn edge and a map pin, the two things the
+app does — is drawn from the same tokens by
+[`tool/generate_app_icon.py`](tool/generate_app_icon.py), so it cannot drift
+from the palette. To change it:
+
+```bash
+python3 tool/generate_app_icon.py   # redraws the 1024px source art
+dart run flutter_launcher_icons     # writes iOS, Android and web assets
+```
+
+The script emits two files: a full-bleed icon, and a transparent foreground for
+Android adaptive icons drawn large enough to survive the 16% inset
+`flutter_launcher_icons` applies, landing inside Android's 66% safe zone.
+
 ## How it is put together
 
 ```
