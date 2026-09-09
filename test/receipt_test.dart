@@ -24,6 +24,21 @@ void main() {
       expect(sample().formattedIssuedAt, '09 Sep 2026, 14:32');
     });
 
+    test('file label falls back to the date when there is no number', () {
+      expect(sample().fileLabel, 'receipt-RCP-20260909-1432');
+
+      final unnumbered = Receipt(
+        number: '',
+        from: 'Ichsan',
+        to: 'Budi',
+        phone: '0812',
+        productName: 'Kopi',
+        address: 'Jakarta',
+        issuedAt: DateTime(2026, 9, 9, 14, 32),
+      );
+      expect(unnumbered.fileLabel, 'receipt-20260909-1432');
+    });
+
     test('exposes a maps deep link only when coordinates are known', () {
       expect(sample().mapsUrl, isNull);
       expect(sample().hasCoordinates, isFalse);

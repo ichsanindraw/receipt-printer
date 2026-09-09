@@ -12,6 +12,17 @@ import '../models/receipt.dart';
 class ReceiptEscPosService {
   const ReceiptEscPosService();
 
+  /// Form values print at double height. Width stays single so a line still
+  /// holds 48 characters on 80 mm paper and long addresses do not wrap early.
+  /// At single height they came off the printer noticeably too small to read.
+  static const PosStyles _value = PosStyles(
+    bold: true,
+    height: PosTextSize.size2,
+  );
+
+  /// Field captions stay in the small font so the value is what carries.
+  static const PosStyles _label = PosStyles(fontType: PosFontType.fontB);
+
   Future<List<int>> build(
     Receipt receipt, {
     PaperWidth paperWidth = PaperWidth.mm80,
@@ -36,7 +47,8 @@ class ReceiptEscPosService {
         styles: const PosStyles(align: PosAlign.center),
       ),
       ...generator.hr(),
-      ..._pair(generator, 'NO.', receipt.number),
+      // The receipt number is optional; skip the line rather than print a dash.
+      if (receipt.number.isNotEmpty) ..._pair(generator, 'NO.', receipt.number),
       ..._pair(generator, 'TGL', receipt.formattedIssuedAt),
       ...generator.hr(),
       ..._block(generator, 'DARI', receipt.from),
@@ -72,7 +84,11 @@ class ReceiptEscPosService {
     bytes.addAll(
       generator.text(
         'TERIMA KASIH',
-        styles: const PosStyles(align: PosAlign.center, bold: true),
+        styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+          height: PosTextSize.size2,
+        ),
       ),
     );
     bytes.addAll(generator.feed(2));
@@ -91,7 +107,7 @@ class ReceiptEscPosService {
       PosColumn(
         text: value,
         width: 9,
-        styles: const PosStyles(align: PosAlign.right, bold: true),
+        styles: _value.copyWith(align: PosAlign.right),
       ),
     ]);
   }
@@ -100,14 +116,8 @@ class ReceiptEscPosService {
   /// wrap across the full paper width instead of being truncated.
   List<int> _block(Generator generator, String label, String value) {
     return [
-      ...generator.text(
-        label,
-        styles: const PosStyles(fontType: PosFontType.fontB),
-      ),
-      ...generator.text(
-        value.isEmpty ? '-' : value,
-        styles: const PosStyles(bold: true),
-      ),
+      ...generator.text(label, styles: _label),
+      ...generator.text(value.isEmpty ? '-' : value, styles: _value),
     ];
   }
 }

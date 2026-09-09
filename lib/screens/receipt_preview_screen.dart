@@ -15,11 +15,15 @@ class ReceiptPreviewScreen extends StatelessWidget {
     const service = ReceiptPdfService();
 
     return Scaffold(
-      appBar: AppBar(title: Text('Receipt ${receipt.number}')),
+      appBar: AppBar(
+        title: Text(
+          receipt.number.isEmpty ? 'Pratinjau resi' : 'Resi ${receipt.number}',
+        ),
+      ),
       body: PdfPreview(
         build: (format) => service.build(receipt),
         initialPageFormat: ReceiptPdfService.pageFormat,
-        pdfFileName: 'receipt-${receipt.number}.pdf',
+        pdfFileName: '${receipt.fileLabel}.pdf',
         canChangeOrientation: false,
         canChangePageFormat: false,
         canDebug: false,

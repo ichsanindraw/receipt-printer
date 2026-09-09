@@ -38,6 +38,15 @@ class Receipt {
 
   bool get hasCoordinates => latitude != null && longitude != null;
 
+  /// The receipt number is optional, so printing and file names fall back to
+  /// the issue date rather than producing a bare `receipt-`.
+  String get fileLabel {
+    if (number.trim().isEmpty) {
+      return 'receipt-${DateFormat('yyyyMMdd-HHmm').format(issuedAt)}';
+    }
+    return 'receipt-${number.trim()}';
+  }
+
   String get formattedIssuedAt =>
       DateFormat('dd MMM yyyy, HH:mm').format(issuedAt);
 

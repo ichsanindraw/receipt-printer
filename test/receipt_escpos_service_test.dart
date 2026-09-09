@@ -24,6 +24,33 @@ void main() {
   String textOf(List<int> bytes) =>
       String.fromCharCodes(bytes.where((b) => b >= 32 && b < 127));
 
+  int indexOfText(List<int> bytes, String text) {
+    final needle = text.codeUnits;
+    outer:
+    for (var i = 0; i <= bytes.length - needle.length; i++) {
+      for (var j = 0; j < needle.length; j++) {
+        if (bytes[i + j] != needle[j]) continue outer;
+      }
+      return i;
+    }
+    return -1;
+  }
+
+  /// The `GS ! n` in force when [text] is printed. The low nibble of n is the
+  /// height multiplier - 1, the high nibble the width multiplier - 1.
+  int sizeByteFor(List<int> bytes, String text) {
+    final end = indexOfText(bytes, text);
+    expect(end, greaterThan(-1), reason: '"$text" is not in the output');
+    var size = 0;
+    for (var i = 0; i + 2 < end; i++) {
+      if (bytes[i] == 0x1D && bytes[i + 1] == 0x21) size = bytes[i + 2];
+    }
+    return size;
+  }
+
+  int heightMultiplier(int sizeByte) => (sizeByte & 0x0F) + 1;
+  int widthMultiplier(int sizeByte) => ((sizeByte >> 4) & 0x0F) + 1;
+
   test('carries every field the receipt shows', () async {
     final text = textOf(await service.build(receipt()));
 
@@ -53,6 +80,64 @@ void main() {
       located.length,
       greaterThan((await service.build(receipt())).length),
     );
+  });
+
+  test('form values print at double height so they are readable', () async {
+    // Regression: values printed at the base size came off an 80 mm printer
+    // too small to read next to the header.
+    final bytes = await service.build(receipt());
+
+    for (final value in [
+      'Ichsan',
+      'Budi',
+      '081234567890',
+      'Jl. Sudirman No. 1, Jakarta',
+      'Espresso Machine',
+    ]) {
+      final size = sizeByteFor(bytes, value);
+      expect(
+        heightMultiplier(size),
+        2,
+        reason: '"$value" is not double height',
+      );
+      expect(
+        widthMultiplier(size),
+        1,
+        reason: '"$value" must stay single width to keep 48 chars per line',
+      );
+    }
+  });
+
+  test('field captions stay smaller than their values', () async {
+    final bytes = await service.build(receipt());
+    expect(heightMultiplier(sizeByteFor(bytes, 'ALAMAT')), 1);
+    expect(heightMultiplier(sizeByteFor(bytes, 'Jl. Sudirman')), 2);
+  });
+
+  group('optional receipt number', () {
+    test('prints the number line when one is set', () async {
+      final text = textOf(await service.build(receipt()));
+      expect(text, contains('NO.'));
+      expect(text, contains('RCP-20260910-1432'));
+    });
+
+    test('omits the whole line when the number is blank', () async {
+      final blank = Receipt(
+        number: '',
+        from: 'Ichsan',
+        to: 'Budi',
+        phone: '081234567890',
+        productName: 'Espresso Machine',
+        address: 'Jl. Sudirman No. 1, Jakarta',
+        issuedAt: DateTime(2026, 9, 10, 14, 32),
+      );
+
+      final text = textOf(await service.build(blank));
+      expect(text, isNot(contains('NO.')));
+      // The date line still prints.
+      expect(text, contains('TGL'));
+      expect(text, contains('10 Sep 2026'));
+    });
   });
 
   test('58 mm paper produces a narrower ticket than 80 mm', () async {

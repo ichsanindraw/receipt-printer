@@ -135,7 +135,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
 
   Future<void> _printToSystemDialog(Receipt receipt) async {
     await Printing.layoutPdf(
-      name: 'receipt-${receipt.number}',
+      name: receipt.fileLabel,
       format: ReceiptPdfService.pageFormat,
       onLayout: (format) => _pdfService.build(receipt),
     );
@@ -257,7 +257,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
                     AppTextField(
                       label: 'Nomor',
                       controller: _numberController,
-                      validator: (v) => _required(v, 'Nomor resi'),
+                      helper: 'Opsional — kosongkan kalau tidak dipakai.',
                     ),
                   ],
                 ),

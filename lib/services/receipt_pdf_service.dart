@@ -26,7 +26,7 @@ class ReceiptPdfService {
     final bold = pw.Font.courierBold();
 
     final document = pw.Document(
-      title: 'Receipt ${receipt.number}',
+      title: receipt.fileLabel,
       author: AppConfig.appName,
     );
 
@@ -39,7 +39,10 @@ class ReceiptPdfService {
           children: [
             _header(bold, regular),
             _divider(),
-            _row('NO.', receipt.number, regular, bold),
+            // The receipt number is optional; skip the row rather than
+            // print an empty one.
+            if (receipt.number.isNotEmpty)
+              _row('NO.', receipt.number, regular, bold),
             _row('DATE', receipt.formattedIssuedAt, regular, bold),
             _divider(),
             _block('FROM', receipt.from, regular, bold),

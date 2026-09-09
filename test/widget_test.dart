@@ -61,6 +61,22 @@ void main() {
       expect(find.text('Alamat wajib diisi'), findsOneWidget);
     });
 
+    testWidgets('the receipt number is optional', (tester) async {
+      await pumpApp(tester);
+
+      await tester.enterText(fieldFor('Nomor'), '');
+      await tester.tap(find.widgetWithText(AppButton, 'Cetak resi'));
+      await tester.pump();
+
+      // The other fields still complain; the number does not.
+      expect(find.text('Nama pengirim wajib diisi'), findsOneWidget);
+      expect(find.textContaining('Nomor resi'), findsNothing);
+      expect(
+        find.text('Opsional — kosongkan kalau tidak dipakai.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('rejects a phone number that is too short', (tester) async {
       await pumpApp(tester);
 
