@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:receipt_printer/app.dart';
 import 'package:receipt_printer/widgets/app_button.dart';
 import 'package:receipt_printer/widgets/app_text_field.dart';
@@ -8,6 +9,8 @@ void main() {
   /// Each tab is a lazily built ListView, so give it a surface tall enough to
   /// lay out every card at once.
   Future<void> pumpApp(WidgetTester tester) async {
+    // The home screen reads saved printer settings on start.
+    SharedPreferences.setMockInitialValues({});
     await tester.binding.setSurfaceSize(const Size(900, 2600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const ReceiptPrinterApp());

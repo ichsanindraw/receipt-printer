@@ -6,6 +6,10 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Aplikasi memakai Bluetooth untuk mencetak resi ke printer thermal.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Aplikasi memakai Bluetooth untuk mencetak resi ke printer thermal.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Receipt Printer</string>
 	<key>CFBundleExecutable</key>

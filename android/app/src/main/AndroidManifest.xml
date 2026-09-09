@@ -2,6 +2,16 @@
     <!-- Address autocomplete and map tiles are fetched over the network. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Bluetooth thermal printers. SCAN/CONNECT are the Android 12+ (API 31)
+         runtime permissions; the legacy pair is capped below API 31. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30"/>
+
     <application
         android:label="Receipt Printer"
         android:name="${applicationName}"

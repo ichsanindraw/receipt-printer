@@ -3,9 +3,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:printing/printing.dart';
 
 import '../models/address_suggestion.dart';
+import '../models/printer_settings.dart';
 import '../models/receipt.dart';
 import '../services/address_service.dart';
+import '../services/receipt_escpos_service.dart';
 import '../services/receipt_pdf_service.dart';
+import '../services/thermal_printer_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_card.dart';
@@ -16,9 +19,19 @@ import 'receipt_preview_screen.dart';
 
 /// Fill in the delivery details, then print.
 class ReceiptFormScreen extends StatefulWidget {
-  const ReceiptFormScreen({super.key, required this.addressService});
+  const ReceiptFormScreen({
+    super.key,
+    required this.addressService,
+    required this.printerService,
+    required this.printerSettings,
+  });
 
   final AddressService addressService;
+  final ThermalPrinterService printerService;
+
+  /// When a thermal printer is paired the receipt goes straight to it;
+  /// otherwise printing falls back to the platform print dialog.
+  final PrinterSettings printerSettings;
 
   @override
   State<ReceiptFormScreen> createState() => _ReceiptFormScreenState();
@@ -40,6 +53,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
   bool _printing = false;
 
   static const _pdfService = ReceiptPdfService();
+  static const _escPosService = ReceiptEscPosService();
 
   @override
   bool get wantKeepAlive => true;
@@ -83,18 +97,48 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
     if (_printing || !_validate()) return;
 
     final receipt = _buildReceipt();
+    final settings = widget.printerSettings;
     setState(() => _printing = true);
     try {
-      await Printing.layoutPdf(
-        name: 'receipt-${receipt.number}',
-        format: ReceiptPdfService.pageFormat,
-        onLayout: (format) => _pdfService.build(receipt),
-      );
+      if (settings.hasDevice && widget.printerService.isSupported) {
+        await _printToThermal(receipt, settings);
+      } else {
+        await _printToSystemDialog(receipt);
+      }
+    } on ThermalPrinterException catch (error) {
+      _showMessage(error.message);
     } catch (error) {
-      _showMessage('Gagal membuka printer: $error');
+      _showMessage('Gagal mencetak: $error');
     } finally {
       if (mounted) setState(() => _printing = false);
     }
+  }
+
+  Future<void> _printToThermal(
+    Receipt receipt,
+    PrinterSettings settings,
+  ) async {
+    final bytes = await _escPosService.build(
+      receipt,
+      paperWidth: settings.paperWidth,
+      cutPaper: settings.cutPaper,
+    );
+    await widget.printerService.printBytes(
+      bytes,
+      address: settings.deviceAddress!,
+      copies: settings.copies,
+    );
+    if (mounted) {
+      _showMessage('Resi dikirim ke ${settings.deviceName ?? 'printer'}.');
+    }
+  }
+
+  Future<void> _printToSystemDialog(Receipt receipt) async {
+    await Printing.layoutPdf(
+      name: 'receipt-${receipt.number}',
+      format: ReceiptPdfService.pageFormat,
+      onLayout: (format) => _pdfService.build(receipt),
+    );
   }
 
   void _preview() {

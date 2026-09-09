@@ -25,6 +25,35 @@ One codebase, running on **Android, iOS and the web**.
 The printed receipt carries a QR code linking to the delivery address on Google
 Maps, so a courier can scan the paper slip and navigate straight there.
 
+## Printers
+
+Tap the printer icon in the header to open printer settings: pair a Bluetooth
+thermal printer, choose 58 or 80 mm paper, set copies, toggle the auto-cut, and
+run a test print.
+
+There are two print paths, and the app picks one automatically:
+
+| Printer paired | What happens |
+|---|---|
+| Yes | The receipt is rendered as **ESC/POS** commands and sent straight to the thermal printer |
+| No | Falls back to the **system print dialog** — AirPrint, Android Print, or the browser dialog — with the PDF receipt |
+
+The fallback matters: `Printing.layoutPdf` reaches office and network printers
+but cannot talk to a Bluetooth thermal printer, and the Bluetooth plugin has no
+web support at all. Keeping both means every platform can print something.
+
+- **Android** — pair the printer in system Bluetooth settings first; the app
+  lists paired devices. `BLUETOOTH_SCAN` / `BLUETOOTH_CONNECT` are requested at
+  runtime on Android 12+.
+- **iOS** — nearby BLE printers are listed directly, no pairing step.
+- **Web** — Bluetooth printing is unavailable; the settings screen says so and
+  the browser print dialog is used instead.
+
+> Bluetooth printing has not been verified against physical hardware — there was
+> no thermal printer available, and the iOS Simulator has no Bluetooth adapter.
+> The ESC/POS byte stream, the settings model and the settings UI are covered by
+> tests; the transport itself needs a real printer to confirm.
+
 ## Ongkir
 
 Pick an origin and destination, set the weight, choose couriers, and get every
@@ -119,6 +148,7 @@ lib/
 ├── models/
 │   ├── address_suggestion.dart         one place: label, id, coordinates
 │   ├── receipt.dart                    the form's data, plus the maps deep link
+│   ├── printer_settings.dart           paired printer, paper width, copies
 │   ├── courier.dart                    courier codes and names
 │   └── shipping_quote.dart             one quoted service
 ├── services/
@@ -129,11 +159,15 @@ lib/
 │   ├── estimated_shipping_rate_service.dart   offline distance model
 │   ├── rajaongkir_shipping_rate_service.dart  live tariffs
 │   ├── *_factory.dart                  pick a provider from the build config
-│   └── receipt_pdf_service.dart        renders the 80 mm receipt PDF
+│   ├── receipt_pdf_service.dart        renders the 80 mm receipt PDF
+│   ├── receipt_escpos_service.dart     renders the same receipt as ESC/POS
+│   ├── thermal_printer_service.dart    Bluetooth transport (io/web split)
+│   └── printer_settings_store.dart     persists the paired printer
 ├── screens/
 │   ├── home_screen.dart                tab shell, owns the shared services
 │   ├── receipt_form_screen.dart        Resi tab
 │   ├── shipping_screen.dart            Ongkir tab
+│   ├── printer_settings_screen.dart    pair a printer, paper, test print
 │   └── receipt_preview_screen.dart     PDF preview with print/share
 └── widgets/                            the design-system components
 ```
