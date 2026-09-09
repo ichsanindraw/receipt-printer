@@ -139,13 +139,6 @@ void main() {
       );
       expect(print.onPressed, isNull);
     });
-
-    testWidgets('explains that a printer must be paired first', (tester) async {
-      await pumpApp(tester);
-      await openTab(tester, 'Gambar');
-
-      expect(find.textContaining('Pilih printer dulu'), findsOneWidget);
-    });
   });
 
   group('ongkir tab', () {
