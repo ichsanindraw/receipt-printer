@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../config/app_config.dart';
+import '../theme/app_theme.dart';
 
 /// Shows the picked address on an OpenStreetMap tile layer. Tapping the map
 /// moves the pin, which the parent reverse-geocodes back into an address.
@@ -63,10 +64,16 @@ class _MapPreviewState extends State<MapPreview> {
     final theme = Theme.of(context);
     final point = _point;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+    final palette = AppPalette.of(context);
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.field),
+        border: Border.all(color: palette.hairline),
+      ),
       child: SizedBox(
-        height: 220,
+        height: 200,
         child: point == null
             ? _placeholder(theme)
             : Stack(
@@ -132,7 +139,7 @@ class _MapPreviewState extends State<MapPreview> {
                   Positioned(
                     left: 8,
                     top: 8,
-                    child: _hint(theme, 'Tap the map to move the pin'),
+                    child: _hint(theme, palette, 'Ketuk peta untuk geser pin'),
                   ),
                 ],
               ),
@@ -154,10 +161,8 @@ class _MapPreviewState extends State<MapPreview> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Pick an address to see it on the map',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              'Pilih alamat untuk melihat peta',
+              style: theme.textTheme.bodySmall,
             ),
           ],
         ),
@@ -165,15 +170,19 @@ class _MapPreviewState extends State<MapPreview> {
     );
   }
 
-  Widget _hint(ThemeData theme, String text) {
+  Widget _hint(ThemeData theme, AppPalette palette, String text) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(20),
+        color: theme.colorScheme.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: palette.hairline),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: Text(text, style: theme.textTheme.labelSmall),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+        child: Text(
+          text,
+          style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+        ),
       ),
     );
   }

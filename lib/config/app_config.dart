@@ -18,6 +18,16 @@ class AppConfig {
 
   static bool get hasGooglePlacesKey => googlePlacesApiKey.isNotEmpty;
 
+  /// RajaOngkir V2 (Komerce) key, injected with `--dart-define`. Without one
+  /// the shipping tab falls back to the offline distance estimator.
+  ///
+  /// Never hard-code a key here — this file is public.
+  static const String rajaOngkirApiKey = String.fromEnvironment(
+    'RAJAONGKIR_API_KEY',
+  );
+
+  static bool get hasRajaOngkirKey => rajaOngkirApiKey.isNotEmpty;
+
   /// Sent to Nominatim and the OSM tile servers so we play by their usage
   /// policy, which requires an identifiable client.
   static const String userAgent =
