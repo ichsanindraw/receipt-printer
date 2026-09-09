@@ -64,40 +64,56 @@ class SegmentedTabs extends StatelessWidget {
                   ),
                 ),
               ),
-              Row(
-                children: [
-                  for (var i = 0; i < labels.length; i++)
-                    Expanded(
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => onChanged(i),
-                        child: AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 180),
-                          style:
-                              theme.textTheme.titleSmall?.copyWith(
-                                color: i == index
-                                    ? theme.colorScheme.onSurface
-                                    : palette.inkMuted,
-                              ) ??
-                              const TextStyle(),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                icons[i],
-                                size: 17,
-                                color: i == index
-                                    ? theme.colorScheme.onSurface
-                                    : palette.inkMuted,
-                              ),
-                              const SizedBox(width: 7),
-                              Text(labels[i]),
-                            ],
+              // Positioned.fill matters: a non-positioned Stack child gets
+              // loose constraints, so the row would shrink-wrap to the text
+              // height and sit at the top of the bar, leaving the lower half
+              // untappable.
+              Positioned.fill(
+                child: Row(
+                  // Stretch so each segment's tap target is the full height of
+                  // the bar, not just the height of its label.
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < labels.length; i++)
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => onChanged(i),
+                          child: AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 180),
+                            style:
+                                theme.textTheme.titleSmall?.copyWith(
+                                  color: i == index
+                                      ? theme.colorScheme.onSurface
+                                      : palette.inkMuted,
+                                ) ??
+                                const TextStyle(),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  icons[i],
+                                  size: 17,
+                                  color: i == index
+                                      ? theme.colorScheme.onSurface
+                                      : palette.inkMuted,
+                                ),
+                                const SizedBox(width: 7),
+                                Text(
+                                  labels[i],
+                                  // The type scale sets a 1.3 line height,
+                                  // which pushes the glyphs off the icon's
+                                  // optical centre inside a Row.
+                                  style: const TextStyle(height: 1),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ],
           );
