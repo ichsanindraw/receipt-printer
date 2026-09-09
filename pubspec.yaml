@@ -56,6 +56,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -127,3 +128,23 @@ flutter_launcher_icons:
     generate: true
     background_color: "#171614"
     theme_color: "#171614"
+
+# Native launch screen. Regenerate the art with
+# `python3 tool/generate_brand_assets.py`, then run
+# `dart run flutter_native_splash:create`.
+#
+# The grounds match the app's own scaffold colours so the splash hands over
+# to the first frame without a flash: paper in light, near-black in dark.
+flutter_native_splash:
+  color: "#F4F3F0"
+  color_dark: "#121110"
+  image: assets/splash/splash_light.png
+  image_dark: assets/splash/splash_dark.png
+  android: true
+  ios: true
+  web: true
+  android_12:
+    color: "#F4F3F0"
+    color_dark: "#121110"
+    image: assets/splash/splash_android12_light.png
+    image_dark: assets/splash/splash_android12_dark.png

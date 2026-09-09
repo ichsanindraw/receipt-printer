@@ -139,21 +139,38 @@ template on either platform:
 - Tokens live in `lib/theme/app_theme.dart`; extra colours the Material
   `ColorScheme` has no slot for hang off an `AppPalette` theme extension.
 
-### App icon
+### Icon and splash
 
-The icon — a receipt slip with a torn edge and a map pin, the two things the
+The mark — a receipt slip with a torn edge and a map pin, the two things the
 app does — is drawn from the same tokens by
-[`tool/generate_app_icon.py`](tool/generate_app_icon.py), so it cannot drift
-from the palette. To change it:
+[`tool/generate_brand_assets.py`](tool/generate_brand_assets.py), so it cannot
+drift from the palette. To change it:
 
 ```bash
-python3 tool/generate_app_icon.py   # redraws the 1024px source art
-dart run flutter_launcher_icons     # writes iOS, Android and web assets
+python3 tool/generate_brand_assets.py    # redraws the source art
+dart run flutter_launcher_icons          # iOS, Android and web icons
+dart run flutter_native_splash:create    # native launch screens
 ```
 
-The script emits two files: a full-bleed icon, and a transparent foreground for
-Android adaptive icons drawn large enough to survive the 16% inset
-`flutter_launcher_icons` applies, landing inside Android's 66% safe zone.
+The script draws the mark twice — light-on-dark for the icon and the dark
+splash, dark-on-light for the light splash — so it reads on either ground. Two
+sizing rules are baked in, both learned the hard way:
+
+- The **Android adaptive foreground** is drawn at 85% coverage because
+  `flutter_launcher_icons` wraps it in a further 16% inset. At the usual 50%
+  the icon came out about a third of the canvas.
+- The **splash art** is a 640px source, because `flutter_native_splash` treats
+  it as the 4x asset. A 1024px source renders a ~205dp logo; 640px lands a
+  conventional ~145dp.
+
+Splash grounds match the app's own scaffold colours — `#F4F3F0` light,
+`#121110` dark — so the launch screen hands over to the first frame without a
+flash, in both modes and on Android 12+'s `windowSplashScreen` API.
+
+> **If you still see a white flash on iOS after changing the splash:** iOS
+> caches the launch screen and the cache survives reinstalls. Test on a
+> simulator that has never had the app, or erase the device. The storyboard
+> itself is fine — this bit us during development and cost an hour.
 
 ## How it is put together
 
