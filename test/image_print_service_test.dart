@@ -108,6 +108,49 @@ void main() {
     );
   });
 
+  test('sends a tall image as several raster bands', () async {
+    // Regression: one raster command for a whole picture overran the
+    // printer's buffer, which printed the top and dropped the rest.
+    final tall = img.Image(width: 400, height: 900);
+    final prepared = await ImagePrintService.prepare(
+      img.encodePng(tall),
+      PaperWidth.mm80,
+    );
+    final bytes = await service.build(prepared!);
+
+    // GS v 0 — print raster bit image.
+    var rasterCommands = 0;
+    for (var i = 0; i < bytes.length - 2; i++) {
+      if (bytes[i] == 0x1D && bytes[i + 1] == 0x76 && bytes[i + 2] == 0x30) {
+        rasterCommands++;
+      }
+    }
+
+    expect(prepared.height, greaterThan(64));
+    expect(
+      rasterCommands,
+      (prepared.height / 64).ceil(),
+      reason: 'one raster command per 64-row band',
+    );
+  });
+
+  test('a short image still prints as a single band', () async {
+    final short = img.Image(width: 576, height: 40);
+    final prepared = await ImagePrintService.prepare(
+      img.encodePng(short),
+      PaperWidth.mm80,
+    );
+    final bytes = await service.build(prepared!);
+
+    var rasterCommands = 0;
+    for (var i = 0; i < bytes.length - 2; i++) {
+      if (bytes[i] == 0x1D && bytes[i + 1] == 0x76 && bytes[i + 2] == 0x30) {
+        rasterCommands++;
+      }
+    }
+    expect(rasterCommands, 1);
+  });
+
   test('builds an ESC/POS raster job', () async {
     final prepared = await ImagePrintService.prepare(
       img.encodePng(gradient()),

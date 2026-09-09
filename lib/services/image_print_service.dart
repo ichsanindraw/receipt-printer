@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
@@ -38,6 +40,10 @@ class ImagePrintService {
   /// Caps the paper a single picture can use — about 175 mm at 203 dpi.
   static const int maxHeightDots = 1400;
 
+  /// Rows per raster command. 64 rows of an 80 mm head is ~4.6 kB, small
+  /// enough for the printer to accept and print without overflowing.
+  static const int _bandRows = 64;
+
   /// Decoding and dithering a full-size photo takes long enough to drop
   /// frames, so it runs off the UI isolate.
   static Future<PreparedImage?> prepare(Uint8List source, PaperWidth paper) =>
@@ -63,12 +69,27 @@ class ImagePrintService {
       profile,
     );
 
-    return [
-      ...generator.reset(),
-      ...generator.imageRaster(decoded, align: PosAlign.center),
-      ...generator.feed(2),
-      if (cutPaper) ...generator.cut(),
-    ];
+    final bytes = <int>[...generator.reset()];
+
+    // One raster command for a full-page image is tens of kilobytes, which
+    // overruns the buffer on a cheap printer: it prints the top and drops the
+    // rest. Horizontal bands keep each command small and self-contained, so
+    // the printer can retire one before the next arrives.
+    for (var top = 0; top < decoded.height; top += _bandRows) {
+      final height = math.min(_bandRows, decoded.height - top);
+      final band = img.copyCrop(
+        decoded,
+        x: 0,
+        y: top,
+        width: decoded.width,
+        height: height,
+      );
+      bytes.addAll(generator.imageRaster(band, align: PosAlign.center));
+    }
+
+    bytes.addAll(generator.feed(2));
+    if (cutPaper) bytes.addAll(generator.cut());
+    return bytes;
   }
 }
 

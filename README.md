@@ -239,9 +239,16 @@ factory — nothing else in the app knows which provider is in use.
 - Map tiles come from OpenStreetMap's public tile servers. Their tile usage
   policy applies; for real traffic, point `MapPreview` at your own tile source.
 - Shipping quotes exclude volume weight and insurance.
-- Receipt values print at double height with single width. At the printer's
-  base size they were too small to read on paper; single width keeps 48
-  characters per line so long addresses still wrap where they did.
+- Receipt values print at double height with single width, in font A. At the
+  printer's base size they were too small to read on paper; single width keeps
+  48 characters per line so long addresses still wrap where they did. Font A
+  has to be stated explicitly on every value: the generator only emits a font
+  command when `fontType` is non-null, so a null one silently inherits font B
+  from the caption above it.
+- Print jobs are written to Bluetooth in 512-byte chunks 20 ms apart, and
+  images are rasterised in 64-row bands. A full-width picture is tens of
+  kilobytes; sent in one write it overran the printer's buffer, which printed
+  the top of the image and dropped the rest.
 
 ## License
 

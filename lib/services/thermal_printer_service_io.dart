@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
@@ -66,7 +69,37 @@ class IoThermalPrinterService implements ThermalPrinterService {
     await _ensureConnected(address);
 
     for (var copy = 0; copy < copies; copy++) {
-      final sent = await PrintBluetoothThermal.writeBytes(bytes);
+      await _write(bytes);
+    }
+  }
+
+  /// Bytes per Bluetooth write, and the pause between them.
+  ///
+  /// A receipt is about a kilobyte, but a full-width image is tens of
+  /// kilobytes, and handing that to the printer in one write overruns its
+  /// buffer: it prints the top of the picture and silently drops the rest.
+  /// 512 bytes every 20 ms is roughly 25 kB/s, comfortably under the speed
+  /// the head can actually put on paper, so the buffer never runs ahead.
+  static const int _chunkBytes = 512;
+  static const Duration _chunkPause = Duration(milliseconds: 20);
+
+  /// Splits a job into writes. Pure and exposed so the split can be tested:
+  /// a bug here would silently corrupt every print.
+  @visibleForTesting
+  static Iterable<List<int>> chunk(
+    List<int> bytes, [
+    int size = _chunkBytes,
+  ]) sync* {
+    if (bytes.isEmpty) return;
+    for (var offset = 0; offset < bytes.length; offset += size) {
+      yield bytes.sublist(offset, math.min(offset + size, bytes.length));
+    }
+  }
+
+  Future<void> _write(List<int> bytes) async {
+    var written = 0;
+    for (final part in chunk(bytes)) {
+      final sent = await PrintBluetoothThermal.writeBytes(part);
       if (!sent) {
         // The link is unreliable once a write fails; force a fresh connect.
         _connectedAddress = null;
@@ -74,6 +107,8 @@ class IoThermalPrinterService implements ThermalPrinterService {
           'Gagal mengirim data ke printer. Coba hubungkan ulang.',
         );
       }
+      written += part.length;
+      if (written < bytes.length) await Future<void>.delayed(_chunkPause);
     }
   }
 

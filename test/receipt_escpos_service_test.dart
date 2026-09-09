@@ -51,6 +51,18 @@ void main() {
   int heightMultiplier(int sizeByte) => (sizeByte & 0x0F) + 1;
   int widthMultiplier(int sizeByte) => ((sizeByte >> 4) & 0x0F) + 1;
 
+  /// The `ESC M n` font in force when [text] is printed: 0 is font A, 1 is
+  /// the smaller font B.
+  int fontFor(List<int> bytes, String text) {
+    final end = indexOfText(bytes, text);
+    expect(end, greaterThan(-1), reason: '"$text" is not in the output');
+    var font = 0;
+    for (var i = 0; i + 2 < end; i++) {
+      if (bytes[i] == 0x1B && bytes[i + 1] == 0x4D) font = bytes[i + 2];
+    }
+    return font;
+  }
+
   test('carries every field the receipt shows', () async {
     final text = textOf(await service.build(receipt()));
 
@@ -112,6 +124,27 @@ void main() {
     final bytes = await service.build(receipt());
     expect(heightMultiplier(sizeByteFor(bytes, 'ALAMAT')), 1);
     expect(heightMultiplier(sizeByteFor(bytes, 'Jl. Sudirman')), 2);
+  });
+
+  test('values print in font A, not the caption font', () async {
+    // Regression: captions select font B and the generator only emits a font
+    // command when fontType is non-null, so values with a null fontType
+    // inherited font B and printed in the small face at double height.
+    final bytes = await service.build(receipt());
+
+    for (final caption in ['DARI', 'KEPADA', 'TELEPON', 'ALAMAT', 'PRODUK']) {
+      expect(fontFor(bytes, caption), 1, reason: '$caption should be font B');
+    }
+    for (final value in [
+      'Ichsan',
+      'Budi',
+      '081234567890',
+      'Jl. Sudirman No. 1, Jakarta',
+      'Espresso Machine',
+    ]) {
+      expect(fontFor(bytes, value), 0, reason: '"$value" should be font A');
+    }
+    expect(fontFor(bytes, 'TERIMA KASIH'), 0);
   });
 
   group('optional receipt number', () {

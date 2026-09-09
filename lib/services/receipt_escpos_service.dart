@@ -15,9 +15,15 @@ class ReceiptEscPosService {
   /// Form values print at double height. Width stays single so a line still
   /// holds 48 characters on 80 mm paper and long addresses do not wrap early.
   /// At single height they came off the printer noticeably too small to read.
+  ///
+  /// fontA is stated explicitly and must stay that way: the generator only
+  /// emits a font command when `fontType` is non-null, so leaving it null let
+  /// the value inherit font B from the caption printed just above it and come
+  /// out in the small face at double height — taller, but still cramped.
   static const PosStyles _value = PosStyles(
     bold: true,
     height: PosTextSize.size2,
+    fontType: PosFontType.fontA,
   );
 
   /// Field captions stay in the small font so the value is what carries.
@@ -40,6 +46,7 @@ class ReceiptEscPosService {
           bold: true,
           height: PosTextSize.size2,
           width: PosTextSize.size2,
+          fontType: PosFontType.fontA,
         ),
       ),
       ...generator.text(
@@ -88,6 +95,7 @@ class ReceiptEscPosService {
           align: PosAlign.center,
           bold: true,
           height: PosTextSize.size2,
+          fontType: PosFontType.fontA,
         ),
       ),
     );
