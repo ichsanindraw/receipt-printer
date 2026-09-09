@@ -6,7 +6,9 @@
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
-		<key>NSBluetoothAlwaysUsageDescription</key>
+		<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aplikasi membaca galeri supaya kamu bisa memilih gambar untuk dicetak.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
 		<string>Aplikasi memakai Bluetooth untuk mencetak resi ke printer thermal.</string>
 		<key>NSBluetoothPeripheralUsageDescription</key>
 		<string>Aplikasi memakai Bluetooth untuk mencetak resi ke printer thermal.</string>

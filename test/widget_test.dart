@@ -20,11 +20,13 @@ void main() {
   Finder fieldFor(String label) =>
       find.ancestor(of: find.text(label), matching: find.byType(AppTextField));
 
-  Future<void> openOngkir(WidgetTester tester) async {
-    // The header title and the tab share the label; the tab is the last one.
-    await tester.tap(find.text('Ongkir').last);
+  /// The header title and the tab share the label; the tab is the last one.
+  Future<void> openTab(WidgetTester tester, String label) async {
+    await tester.tap(find.text(label).last);
     await tester.pumpAndSettle();
   }
+
+  Future<void> openOngkir(WidgetTester tester) => openTab(tester, 'Ongkir');
 
   group('receipt tab', () {
     testWidgets('shows every receipt field and the print button', (
@@ -115,6 +117,34 @@ void main() {
 
       expect(find.text('Ichsan'), findsNothing);
       expect(find.text('Formulir dikosongkan.'), findsOneWidget);
+    });
+  });
+
+  group('gambar tab', () {
+    testWidgets('offers a gallery picker and a disabled print button', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await openTab(tester, 'Gambar');
+
+      expect(find.text('Cetak foto dari galeri.'), findsOneWidget);
+      expect(
+        find.widgetWithText(AppButton, 'Pilih dari galeri'),
+        findsOneWidget,
+      );
+
+      // Nothing picked and no printer paired, so printing stays off.
+      final print = tester.widget<AppButton>(
+        find.widgetWithText(AppButton, 'Cetak gambar'),
+      );
+      expect(print.onPressed, isNull);
+    });
+
+    testWidgets('explains that a printer must be paired first', (tester) async {
+      await pumpApp(tester);
+      await openTab(tester, 'Gambar');
+
+      expect(find.textContaining('Pilih printer dulu'), findsOneWidget);
     });
   });
 

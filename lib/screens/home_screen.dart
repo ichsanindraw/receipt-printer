@@ -9,6 +9,7 @@ import '../services/shipping_rate_service_factory.dart';
 import '../services/thermal_printer_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/segmented_tabs.dart';
+import 'print_image_screen.dart';
 import 'printer_settings_screen.dart';
 import 'receipt_form_screen.dart';
 import 'shipping_screen.dart';
@@ -33,6 +34,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   PrinterSettings _printerSettings = const PrinterSettings();
   int _index = 0;
+
+  static const List<String> _titles = ['Resi', 'Ongkir', 'Gambar'];
+  static const List<String> _subtitles = [
+    'Isi detail kiriman, lalu cetak.',
+    'Bandingkan tarif antar kurir.',
+    'Cetak foto dari galeri.',
+  ];
 
   @override
   void initState() {
@@ -100,14 +108,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _index == 0 ? 'Resi' : 'Ongkir',
+                              _titles[_index],
                               style: theme.textTheme.displaySmall,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              _index == 0
-                                  ? 'Isi detail kiriman, lalu cetak.'
-                                  : 'Bandingkan tarif antar kurir.',
+                              _subtitles[_index],
                               style: theme.textTheme.bodySmall,
                             ),
                           ],
@@ -146,10 +152,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   SegmentedTabs(
-                    labels: const ['Resi', 'Ongkir'],
+                    labels: _titles,
                     icons: const [
                       Icons.receipt_long_outlined,
                       Icons.calculate_outlined,
+                      Icons.image_outlined,
                     ],
                     index: _index,
                     onChanged: (value) {
@@ -170,6 +177,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     printerSettings: _printerSettings,
                   ),
                   ShippingScreen(shippingService: _shippingService),
+                  PrintImageScreen(
+                    printerService: _printerService,
+                    printerSettings: _printerSettings,
+                  ),
                 ],
               ),
             ),

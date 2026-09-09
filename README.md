@@ -1,11 +1,11 @@
 # Receipt Printer
 
-A small cross-platform Flutter app for Indonesian delivery work, in two tabs:
+A small cross-platform Flutter app for Indonesian delivery work, in three tabs:
 
-- **Resi** — fill in sender, recipient, receipt number, product, phone and a
-  map-backed address, then print an 80 mm receipt through the device's native
-  print dialog.
+- **Resi** — fill in sender, recipient, product, phone and a map-backed
+  address, then print an 80 mm receipt.
 - **Ongkir** — compare courier tariffs between two places by weight.
+- **Gambar** — print a picture from the gallery on the thermal printer.
 
 One codebase, running on **Android, iOS and the web**.
 
@@ -13,7 +13,7 @@ One codebase, running on **Android, iOS and the web**.
 
 | | |
 |---|---|
-| **Nomor resi** | Auto-generated as `RCP-yyyyMMdd-HHmm`, editable, regenerate button |
+| **Nomor resi** | Optional. Auto-generated as `RCP-yyyyMMdd-HHmm`, editable, regenerate button; blank omits the line from the print |
 | **Dari / Kepada** | Sender and recipient names |
 | **Telepon** | Recipient phone, validated |
 | **Nama produk** | What is being delivered |
@@ -24,6 +24,22 @@ One codebase, running on **Android, iOS and the web**.
 
 The printed receipt carries a QR code linking to the delivery address on Google
 Maps, so a courier can scan the paper slip and navigate straight there.
+
+## Gambar
+
+Pick a photo, see exactly what the printer will produce, print it.
+
+Thermal printers are one bit per dot — a dot is burned or it is not — so a
+photograph has to be reduced to black and white. Plain thresholding turns it
+into blotches, so images are **Floyd–Steinberg dithered**, trading spatial
+resolution for apparent greys. The preview shows the dithered result rather
+than the original, because that is what comes out of the printer; it is
+rendered with `FilterQuality.none` so the dot pattern is not smoothed away.
+
+Images are scaled to the print head width — 576 dots at 80 mm, 384 at 58 mm —
+and capped at 1400 dots (about 175 mm) so one picture cannot run off a metre
+of paper. Preparation runs in a background isolate; dithering a full-size
+photo on the UI isolate drops frames.
 
 ## Printers
 
@@ -194,6 +210,7 @@ lib/
 │   ├── *_factory.dart                  pick a provider from the build config
 │   ├── receipt_pdf_service.dart        renders the 80 mm receipt PDF
 │   ├── receipt_escpos_service.dart     renders the same receipt as ESC/POS
+│   ├── image_print_service.dart        dithers a photo to 1-bit ESC/POS raster
 │   ├── thermal_printer_service.dart    Bluetooth transport (io/web split)
 │   └── printer_settings_store.dart     persists the paired printer
 ├── screens/
@@ -201,6 +218,7 @@ lib/
 │   ├── receipt_form_screen.dart        Resi tab
 │   ├── shipping_screen.dart            Ongkir tab
 │   ├── printer_settings_screen.dart    pair a printer, paper, test print
+│   ├── print_image_screen.dart         Gambar tab
 │   └── receipt_preview_screen.dart     PDF preview with print/share
 └── widgets/                            the design-system components
 ```
@@ -221,6 +239,9 @@ factory — nothing else in the app knows which provider is in use.
 - Map tiles come from OpenStreetMap's public tile servers. Their tile usage
   policy applies; for real traffic, point `MapPreview` at your own tile source.
 - Shipping quotes exclude volume weight and insurance.
+- Receipt values print at double height with single width. At the printer's
+  base size they were too small to read on paper; single width keeps 48
+  characters per line so long addresses still wrap where they did.
 
 ## License
 
