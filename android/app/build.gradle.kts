@@ -6,7 +6,13 @@ plugins {
 
 android {
     namespace = "com.ichsanindraw.receipt_printer"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned instead of flutter.compileSdkVersion (37): this Flutter SDK's
+    // Gradle tooling requests the plain integer hash "android-37", but the
+    // installed SDK now only ships fractional platform releases for that API
+    // level (android-37.0, 37.1, 37.2, ...) — a bare "android-37" package no
+    // longer exists to install. 36 is a real, installed integer platform and
+    // this app has no dependency that requires anything newer.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

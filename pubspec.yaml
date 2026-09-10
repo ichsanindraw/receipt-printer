@@ -60,6 +60,14 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.8
 
+# permission_handler_android 14.x requires compileSdk 37+, which does not
+# exist as an installable integer SDK platform (Google now ships only
+# fractional releases — 37.0, 37.1, ...) and exceeds AGP 9.0.1's supported
+# max of 36 anyway. Pinned to the last version built against 36.
+# Remove once AGP and the installed SDK catch up to API 37.
+dependency_overrides:
+  permission_handler_android: 13.0.1
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
