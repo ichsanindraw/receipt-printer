@@ -35,11 +35,11 @@ class _HomeScreenState extends State<HomeScreen> {
   PrinterSettings _printerSettings = const PrinterSettings();
   int _index = 0;
 
-  static const List<String> _titles = ['Resi', 'Ongkir', 'Gambar'];
+  static const List<String> _titles = ['Resi', 'Gambar', 'Ongkir'];
   static const List<String> _subtitles = [
     'Isi detail kiriman, lalu cetak.',
-    'Bandingkan tarif antar kurir.',
     'Cetak foto dari galeri.',
+    'Bandingkan tarif antar kurir.',
   ];
 
   @override
@@ -155,8 +155,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     labels: _titles,
                     icons: const [
                       Icons.receipt_long_outlined,
-                      Icons.calculate_outlined,
                       Icons.image_outlined,
+                      Icons.calculate_outlined,
                     ],
                     index: _index,
                     onChanged: (value) {
@@ -176,11 +176,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     printerService: _printerService,
                     printerSettings: _printerSettings,
                   ),
-                  ShippingScreen(shippingService: _shippingService),
                   PrintImageScreen(
                     printerService: _printerService,
                     printerSettings: _printerSettings,
                   ),
+                  ShippingScreen(shippingService: _shippingService),
                 ],
               ),
             ),
