@@ -23,8 +23,11 @@ One codebase, running on **Android, iOS and the web**.
 | **Cetak resi** | Renders an 80 mm receipt PDF and opens the system print dialog |
 | **Pratinjau** | Full-screen preview with print and share actions |
 
-The printed receipt carries a QR code linking to the delivery address on Google
-Maps, so a courier can scan the paper slip and navigate straight there.
+The printed receipt has no masthead — it starts straight at NO./TGL rather
+than a RECEIPT title and app name, and carries no maps QR code either; both
+were the biggest things on the paper for a slip meant to stay short. Pinned
+coordinates still print as a small text line under ALAMAT for anyone who
+wants to look them up by hand.
 
 ## Gambar
 

@@ -1,6 +1,5 @@
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 
-import '../config/app_config.dart';
 import '../models/printer_settings.dart';
 import '../models/receipt.dart';
 
@@ -49,21 +48,8 @@ class ReceiptEscPosService {
 
     final bytes = <int>[
       ...generator.reset(),
-      ...generator.text(
-        'RECEIPT',
-        styles: const PosStyles(
-          align: PosAlign.center,
-          bold: true,
-          height: PosTextSize.size2,
-          width: PosTextSize.size2,
-          fontType: PosFontType.fontA,
-        ),
-      ),
-      ...generator.text(
-        AppConfig.appName.toUpperCase(),
-        styles: const PosStyles(align: PosAlign.center),
-      ),
-      ...generator.hr(),
+      // No masthead — a name/logo line the recipient doesn't need, and paper
+      // is worth saving. The receipt starts straight at its own metadata.
       // The receipt number is optional; skip the line rather than print a dash.
       if (receipt.number.isNotEmpty) ..._pair(generator, 'NO.', receipt.number),
       ..._pair(generator, 'TGL', receipt.formattedIssuedAt),
@@ -96,21 +82,9 @@ class ReceiptEscPosService {
       ...generator.hr(),
     ];
 
-    final mapsUrl = receipt.mapsUrl;
-    if (mapsUrl != null) {
-      bytes.addAll(generator.qrcode(mapsUrl, size: QRSize.size6));
-      bytes.addAll(
-        generator.text(
-          'Scan untuk buka alamat',
-          styles: const PosStyles(
-            align: PosAlign.center,
-            fontType: PosFontType.fontB,
-          ),
-        ),
-      );
-      bytes.addAll(generator.hr());
-    }
-
+    // No maps QR code — the QR image itself was the single biggest thing on
+    // the paper, and the coordinates already print as a small text line
+    // under ALAMAT for anyone who wants to look them up by hand.
     bytes.addAll(
       generator.text(
         'TERIMA KASIH',

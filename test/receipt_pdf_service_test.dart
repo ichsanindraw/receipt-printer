@@ -32,13 +32,20 @@ void main() {
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
   });
 
-  test('embeds a map QR code when the address is pinned', () async {
-    final plain = await service.build(receipt());
-    final withMap = await service.build(receipt(lat: -6.2088, lng: 106.8456));
+  test(
+    'adds only the coordinates line, not a map QR code, when pinned',
+    () async {
+      // Regression: a drawn QR code used to be the single biggest thing on the
+      // page. Pinning coordinates should now only add the small text footnote
+      // — measured at 33 bytes for this fixture — nowhere near a barcode's
+      // vector drawing operations.
+      final plain = await service.build(receipt());
+      final located = await service.build(receipt(lat: -6.2088, lng: 106.8456));
 
-    // The QR code adds drawing operations, so the located receipt is larger.
-    expect(withMap.length, greaterThan(plain.length));
-  });
+      expect(located.length, greaterThan(plain.length));
+      expect(located.length - plain.length, lessThan(200));
+    },
+  );
 
   test('a second product line adds real content to the document', () async {
     final oneProduct = await service.build(receipt());

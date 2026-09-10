@@ -37,8 +37,9 @@ class ReceiptPdfService {
           mainAxisSize: pw.MainAxisSize.min,
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
-            _header(bold, regular),
-            _divider(),
+            // No masthead — a name/logo line the recipient doesn't need, and
+            // paper is worth saving. The receipt starts straight at its own
+            // metadata.
             // The receipt number is optional; skip the row rather than
             // print an empty one.
             if (receipt.number.isNotEmpty)
@@ -71,7 +72,10 @@ class ReceiptPdfService {
               _block('NOTES', receipt.notes, regular, bold),
             ],
             _divider(),
-            if (receipt.mapsUrl != null) _mapsQr(receipt.mapsUrl!, regular),
+            // No maps QR code — the QR image itself was the single biggest
+            // thing on the paper, and the coordinates already print as a
+            // small text line under ADDRESS for anyone who wants to look
+            // them up by hand.
             _footer(regular, bold),
           ],
         ),
@@ -79,27 +83,6 @@ class ReceiptPdfService {
     );
 
     return document.save();
-  }
-
-  pw.Widget _header(pw.Font bold, pw.Font regular) {
-    return pw.Column(
-      children: [
-        pw.Text(
-          'RECEIPT',
-          style: pw.TextStyle(font: bold, fontSize: 16, letterSpacing: 4),
-        ),
-        pw.SizedBox(height: 2),
-        pw.Text(
-          AppConfig.appName.toUpperCase(),
-          style: pw.TextStyle(
-            font: regular,
-            fontSize: 7,
-            letterSpacing: 1.5,
-            color: PdfColors.grey700,
-          ),
-        ),
-      ],
-    );
   }
 
   pw.Widget _divider() => pw.Padding(
@@ -203,30 +186,6 @@ class ReceiptPdfService {
                 style: pw.TextStyle(font: bold, fontSize: 9, lineSpacing: 1.5),
               ),
             ),
-      ],
-    );
-  }
-
-  pw.Widget _mapsQr(String url, pw.Font regular) {
-    return pw.Column(
-      children: [
-        pw.BarcodeWidget(
-          barcode: pw.Barcode.qrCode(),
-          data: url,
-          width: 90,
-          height: 90,
-          drawText: false,
-        ),
-        pw.SizedBox(height: 4),
-        pw.Text(
-          'Scan to open the delivery address',
-          style: pw.TextStyle(
-            font: regular,
-            fontSize: 7,
-            color: PdfColors.grey700,
-          ),
-        ),
-        _divider(),
       ],
     );
   }

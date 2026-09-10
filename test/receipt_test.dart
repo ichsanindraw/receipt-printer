@@ -45,16 +45,12 @@ void main() {
       expect(unnumbered.fileLabel, 'receipt-20260909-1432');
     });
 
-    test('exposes a maps deep link only when coordinates are known', () {
-      expect(sample().mapsUrl, isNull);
+    test('formats coordinates only when they are known', () {
       expect(sample().hasCoordinates, isFalse);
+      expect(sample().formattedCoordinates, isEmpty);
 
       final located = sample(lat: -6.2088, lng: 106.8456);
       expect(located.hasCoordinates, isTrue);
-      expect(
-        located.mapsUrl,
-        'https://www.google.com/maps/search/?api=1&query=-6.2088,106.8456',
-      );
       expect(located.formattedCoordinates, '-6.208800, 106.845600');
     });
   });

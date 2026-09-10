@@ -95,7 +95,6 @@ void main() {
   test('carries every field the receipt shows', () async {
     final text = textOf(await service.build(receipt()));
 
-    expect(text, contains('RECEIPT'));
     expect(text, contains('RCP-20260910-1432'));
     expect(text, contains('Ichsan'));
     expect(text, contains('081234567890'));
@@ -111,17 +110,28 @@ void main() {
     expect(bytes.take(2), orderedEquals([0x1B, 0x40]));
   });
 
-  test('adds the QR block only when the address is pinned', () async {
+  test('has no masthead — the receipt starts at its own metadata', () async {
+    // Regression: a name/logo line the recipient doesn't need, on paper
+    // worth saving.
+    final text = textOf(await service.build(receipt()));
+    expect(text, isNot(contains('RECEIPT')));
+    expect(text, isNot(contains('RECEIPT PRINTER')));
+  });
+
+  test('never prints a maps QR code, pinned or not', () async {
+    // Regression: the QR image was the single biggest thing on the paper.
+    // The coordinates still print as a small text line under ALAMAT — that
+    // stays — but nothing invites a scan.
     final plain = textOf(await service.build(receipt()));
-    expect(plain, isNot(contains('Scan untuk buka alamat')));
+    expect(plain, isNot(contains('Scan')));
 
     final located = await service.build(receipt(lat: -6.2088, lng: 106.8456));
-    expect(textOf(located), contains('Scan untuk buka alamat'));
-    expect(textOf(located), contains('-6.208800, 106.845600'));
-    expect(
-      located.length,
-      greaterThan((await service.build(receipt())).length),
-    );
+    final locatedText = textOf(located);
+    expect(locatedText, isNot(contains('Scan')));
+    expect(locatedText, contains('-6.208800, 106.845600'));
+    // The coordinates text line itself still adds a little length, just
+    // nowhere near what the QR image used to.
+    expect(located.length, greaterThan(plain.length));
   });
 
   test('form values print at double height so they are readable', () async {
@@ -193,10 +203,9 @@ void main() {
     expect(fontFor(bytes, 'TERIMA KASIH'), 0);
   });
 
-  test('footnotes deliberately stay in the small font B', () async {
+  test('the coordinates footnote deliberately stays in font B', () async {
     final bytes = await service.build(receipt(lat: -6.2088, lng: 106.8456));
     expect(fontFor(bytes, '-6.208800'), 1);
-    expect(fontFor(bytes, 'Scan untuk buka alamat'), 1);
   });
 
   test('captions are not bold, unlike the values they introduce', () async {
