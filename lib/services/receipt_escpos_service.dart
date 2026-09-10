@@ -26,8 +26,18 @@ class ReceiptEscPosService {
     fontType: PosFontType.fontA,
   );
 
-  /// Field captions stay in the small font so the value is what carries.
-  static const PosStyles _label = PosStyles(fontType: PosFontType.fontB);
+  /// The receipt number and date, one size down from the field values —
+  /// bold enough to find at a glance, but the values below are the content
+  /// the recipient actually needs, and should read as more important.
+  static const PosStyles _metaValue = PosStyles(
+    bold: true,
+    fontType: PosFontType.fontA,
+  );
+
+  /// Field captions. fontA rather than the condensed font B: B read as too
+  /// small and cramped next to double-height values. Not bold, so a caption
+  /// never competes with the bold value it introduces.
+  static const PosStyles _label = PosStyles(fontType: PosFontType.fontA);
 
   Future<List<int>> build(
     Receipt receipt, {
@@ -58,18 +68,27 @@ class ReceiptEscPosService {
       if (receipt.number.isNotEmpty) ..._pair(generator, 'NO.', receipt.number),
       ..._pair(generator, 'TGL', receipt.formattedIssuedAt),
       ...generator.hr(),
+      // A blank line after every field so the recipient's details read as a
+      // list of distinct items rather than one cramped block — previously
+      // only the section dividers gave any breathing room. The coordinates
+      // line stays flush under the address it belongs to; its own gap comes
+      // after the whole address+coordinates unit, not before it.
       ..._block(generator, 'DARI', receipt.from),
       ...generator.feed(1),
       ..._block(generator, 'KEPADA', receipt.to),
+      ...generator.feed(1),
       ..._block(generator, 'TELEPON', receipt.phone),
+      ...generator.feed(1),
       ..._block(generator, 'ALAMAT', receipt.address),
       if (receipt.hasCoordinates)
         ...generator.text(
           receipt.formattedCoordinates,
           styles: const PosStyles(fontType: PosFontType.fontB),
         ),
+      ...generator.feed(1),
       ...generator.hr(),
       ..._block(generator, 'PRODUK', receipt.productName),
+      ...generator.feed(1),
       ...generator.hr(),
     ];
 
@@ -99,6 +118,20 @@ class ReceiptEscPosService {
         ),
       ),
     );
+    // The receipt number is optional and, when left blank, its row is
+    // omitted entirely rather than printed empty — this explains that
+    // absence to whoever is holding the paper.
+    if (receipt.number.isEmpty) {
+      bytes.addAll(
+        generator.text(
+          'Nomor resi tidak diisi',
+          styles: const PosStyles(
+            align: PosAlign.center,
+            fontType: PosFontType.fontB,
+          ),
+        ),
+      );
+    }
     bytes.addAll(generator.feed(2));
     if (cutPaper) bytes.addAll(generator.cut());
 
@@ -115,7 +148,7 @@ class ReceiptEscPosService {
       PosColumn(
         text: value,
         width: 9,
-        styles: _value.copyWith(align: PosAlign.right),
+        styles: _metaValue.copyWith(align: PosAlign.right),
       ),
     ]);
   }

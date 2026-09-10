@@ -4,8 +4,8 @@ A small cross-platform Flutter app for Indonesian delivery work, in three tabs:
 
 - **Resi** — fill in sender, recipient, product, phone and a map-backed
   address, then print an 80 mm receipt.
-- **Ongkir** — compare courier tariffs between two places by weight.
 - **Gambar** — print a picture from the gallery on the thermal printer.
+- **Ongkir** — compare courier tariffs between two places by weight.
 
 One codebase, running on **Android, iOS and the web**.
 
@@ -250,10 +250,30 @@ factory — nothing else in the app knows which provider is in use.
 - Shipping quotes exclude volume weight and insurance.
 - Receipt values print at double height with single width, in font A. At the
   printer's base size they were too small to read on paper; single width keeps
-  48 characters per line so long addresses still wrap where they did. Font A
-  has to be stated explicitly on every value: the generator only emits a font
-  command when `fontType` is non-null, so a null one silently inherits font B
-  from the caption above it.
+  48 characters per line so long addresses still wrap where they did. Captions
+  are font A too (a step up from the condensed font B they started in) but
+  not bold and single height, so a value never reads as less important than
+  the caption above it. Font A has to be stated explicitly on every field: the
+  generator only emits a font command when `fontType` is non-null, so a null
+  one silently inherits whatever font the field before it left active — an
+  easy way to end up with a value in the wrong face without meaning to. The
+  receipt number and date sit one size down from the field values, on the
+  same reasoning: they're metadata, not the content the recipient needs.
+- A blank line follows every field (DARI, KEPADA, TELEPON, ALAMAT, PRODUK),
+  not just the section dividers — cheap on an 80 mm roll, and without it the
+  recipient's details ran together as one cramped block.
+- ESC/POS text mode has no font-family concept — a printer's text is drawn
+  from whatever one or two fonts (usually called A and B) are burned into its
+  own ROM, and no command can swap in a different typeface. Getting the app's
+  actual font (Plus Jakarta Sans) onto paper means abandoning text mode
+  entirely and printing the receipt as a rendered, dithered raster image
+  instead — the same technique `ImagePrintService` already uses for the
+  Gambar tab — at the cost of a slower print and no more editing the layout
+  with plain text commands. Not done; worth doing as a separate change if the
+  built-in fonts are not enough.
+- When the receipt number is left blank, a small note prints below "TERIMA
+  KASIH" explaining that it was not filled in, since the NO. row itself is
+  omitted rather than left visibly empty.
 - Print jobs are written to Bluetooth in 512-byte chunks 20 ms apart, and
   images are rasterised in 64-row bands. A full-width picture is tens of
   kilobytes; sent in one write it overran the printer's buffer, which printed
