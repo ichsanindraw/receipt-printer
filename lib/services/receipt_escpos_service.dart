@@ -68,16 +68,15 @@ class ReceiptEscPosService {
       if (receipt.number.isNotEmpty) ..._pair(generator, 'NO.', receipt.number),
       ..._pair(generator, 'TGL', receipt.formattedIssuedAt),
       ...generator.hr(),
-      // A blank line after every field so the recipient's details read as a
-      // list of distinct items rather than one cramped block — previously
-      // only the section dividers gave any breathing room. The coordinates
-      // line stays flush under the address it belongs to; its own gap comes
-      // after the whole address+coordinates unit, not before it.
+      // A blank line after each name+phone group and after the address, not
+      // just at the section dividers — previously only the dividers gave any
+      // breathing room. Name and phone stay flush together within a group;
+      // the coordinates line stays flush under the address it belongs to.
       ..._block(generator, 'DARI', receipt.from),
+      ..._block(generator, 'NO. HP', receipt.fromPhone),
       ...generator.feed(1),
       ..._block(generator, 'KEPADA', receipt.to),
-      ...generator.feed(1),
-      ..._block(generator, 'TELEPON', receipt.phone),
+      ..._block(generator, 'NO. HP', receipt.toPhone),
       ...generator.feed(1),
       ..._block(generator, 'ALAMAT', receipt.address),
       if (receipt.hasCoordinates)
@@ -87,7 +86,12 @@ class ReceiptEscPosService {
         ),
       ...generator.feed(1),
       ...generator.hr(),
-      ..._block(generator, 'PRODUK', receipt.productName),
+      ..._productList(generator, 'PRODUK', receipt.products),
+      if (receipt.notes.trim().isNotEmpty) ...[
+        ...generator.feed(1),
+        ...generator.hr(),
+        ..._block(generator, 'CATATAN', receipt.notes),
+      ],
       ...generator.feed(1),
       ...generator.hr(),
     ];
@@ -159,6 +163,23 @@ class ReceiptEscPosService {
     return [
       ...generator.text(label, styles: _label),
       ...generator.text(value.isEmpty ? '-' : value, styles: _value),
+    ];
+  }
+
+  /// A caption plus one `* line` per product — a delivery is rarely just one
+  /// item, so this is always a list rather than a single value.
+  List<int> _productList(
+    Generator generator,
+    String label,
+    List<String> products,
+  ) {
+    final items = products.where((p) => p.trim().isNotEmpty).toList();
+    return [
+      ...generator.text(label, styles: _label),
+      if (items.isEmpty)
+        ...generator.text('-', styles: _value)
+      else
+        for (final item in items) ...generator.text('* $item', styles: _value),
     ];
   }
 }

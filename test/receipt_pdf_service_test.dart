@@ -5,13 +5,21 @@ import 'package:receipt_printer/services/receipt_pdf_service.dart';
 void main() {
   const service = ReceiptPdfService();
 
-  Receipt receipt({double? lat, double? lng}) => Receipt(
+  Receipt receipt({
+    double? lat,
+    double? lng,
+    List<String> products = const ['Espresso Machine'],
+    String notes = '',
+    String address = 'Jl. Sudirman No. 1, Jakarta',
+  }) => Receipt(
     number: 'RCP-20260909-1432',
     from: 'Ichsan',
+    fromPhone: '081234567890',
     to: 'Budi',
-    phone: '081234567890',
-    productName: 'Espresso Machine',
-    address: 'Jl. Sudirman No. 1, Jakarta',
+    toPhone: '0895 3735 6500',
+    products: products,
+    address: address,
+    notes: notes,
     latitude: lat,
     longitude: lng,
     issuedAt: DateTime(2026, 9, 9, 14, 32),
@@ -30,6 +38,46 @@ void main() {
 
     // The QR code adds drawing operations, so the located receipt is larger.
     expect(withMap.length, greaterThan(plain.length));
+  });
+
+  test('a second product line adds real content to the document', () async {
+    final oneProduct = await service.build(receipt());
+    final twoProducts = await service.build(
+      receipt(products: const ['Espresso Machine', 'Milk Frother']),
+    );
+
+    expect(twoProducts.length, greaterThan(oneProduct.length));
+  });
+
+  test('renders even with an empty product list', () async {
+    // Defensive: the form always keeps at least one product row, but the
+    // renderer itself should not fall over if that invariant is ever broken.
+    final bytes = await service.build(receipt(products: const []));
+    expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+  });
+
+  test('a note adds real content to the document', () async {
+    final withoutNote = await service.build(receipt());
+    final withNote = await service.build(
+      receipt(notes: 'Titip di satpam kalau tidak ada orang.'),
+    );
+
+    expect(withNote.length, greaterThan(withoutNote.length));
+  });
+
+  test('renders a hand-typed multi-line address without error', () async {
+    // The address is free text the courier may format across several lines
+    // by hand, not only a single autocompleted line.
+    final bytes = await service.build(
+      receipt(
+        address:
+            'Klinik Bersalin Putera Jaya\n'
+            'Jl Apel Gg. Apel Salam\n'
+            'Pontianak Barat, Kota Pontianak\n'
+            'Kalimantan Barat',
+      ),
+    );
+    expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
   });
 
   test('renders the receipt on 80 mm roll paper', () {

@@ -5,11 +5,13 @@ class Receipt {
   const Receipt({
     required this.number,
     required this.from,
+    required this.fromPhone,
     required this.to,
-    required this.phone,
-    required this.productName,
+    required this.toPhone,
+    required this.products,
     required this.address,
     required this.issuedAt,
+    this.notes = '',
     this.latitude,
     this.longitude,
   });
@@ -20,16 +22,28 @@ class Receipt {
   /// Sender name.
   final String from;
 
+  /// Sender phone number.
+  final String fromPhone;
+
   /// Recipient name.
   final String to;
 
   /// Recipient phone number.
-  final String phone;
+  final String toPhone;
 
-  final String productName;
+  /// What is being delivered. More than one line is normal — a single
+  /// delivery often bundles several products — so this is always a list,
+  /// even for one item. Callers are expected to have already dropped blank
+  /// entries; an empty list just prints an empty PRODUK section.
+  final List<String> products;
 
-  /// Delivery address, normally picked from the map autocomplete.
+  /// Delivery address, normally picked from the map autocomplete but just as
+  /// often typed by hand — not every street the courier needs is in the map
+  /// provider's index — so this may be several lines of free text.
   final String address;
+
+  /// Optional free-text note, e.g. delivery instructions.
+  final String notes;
 
   final double? latitude;
   final double? longitude;

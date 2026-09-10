@@ -46,10 +46,12 @@ class ReceiptPdfService {
             _row('DATE', receipt.formattedIssuedAt, regular, bold),
             _divider(),
             _block('FROM', receipt.from, regular, bold),
+            _block('NO. HP', receipt.fromPhone, regular, bold, indent: true),
             pw.SizedBox(height: 8),
             _block('TO', receipt.to, regular, bold),
-            _block('PHONE', receipt.phone, regular, bold, indent: true),
-            _block('ADDRESS', receipt.address, regular, bold, indent: true),
+            _block('NO. HP', receipt.toPhone, regular, bold, indent: true),
+            pw.SizedBox(height: 8),
+            _block('ADDRESS', receipt.address, regular, bold),
             if (receipt.hasCoordinates)
               pw.Padding(
                 padding: const pw.EdgeInsets.only(left: 8, top: 2),
@@ -63,7 +65,11 @@ class ReceiptPdfService {
                 ),
               ),
             _divider(),
-            _block('PRODUCT', receipt.productName, regular, bold),
+            _productList('PRODUCT', receipt.products, regular, bold),
+            if (receipt.notes.trim().isNotEmpty) ...[
+              _divider(),
+              _block('NOTES', receipt.notes, regular, bold),
+            ],
             _divider(),
             if (receipt.mapsUrl != null) _mapsQr(receipt.mapsUrl!, regular),
             _footer(regular, bold),
@@ -157,6 +163,47 @@ class ReceiptPdfService {
           ),
         ],
       ),
+    );
+  }
+
+  /// A caption plus one `* line` per product — a delivery is rarely just one
+  /// item, so this is always a list rather than a single value.
+  pw.Widget _productList(
+    String label,
+    List<String> products,
+    pw.Font regular,
+    pw.Font bold,
+  ) {
+    final items = products.where((p) => p.trim().isNotEmpty).toList();
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            font: regular,
+            fontSize: 7,
+            letterSpacing: 1.2,
+            color: PdfColors.grey700,
+          ),
+        ),
+        pw.SizedBox(height: 2),
+        if (items.isEmpty)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(left: 8),
+            child: pw.Text('-', style: pw.TextStyle(font: bold, fontSize: 9)),
+          )
+        else
+          for (final item in items)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 8, top: 2),
+              child: pw.Text(
+                '* $item',
+                style: pw.TextStyle(font: bold, fontSize: 9, lineSpacing: 1.5),
+              ),
+            ),
+      ],
     );
   }
 

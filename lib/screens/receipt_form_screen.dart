@@ -41,12 +41,25 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
     with AutomaticKeepAliveClientMixin {
   final _formKey = GlobalKey<FormState>();
 
+  // The sender is almost always the same business, so it starts pre-filled
+  // rather than blank — "Kosongkan formulir" restores these two rather than
+  // clearing them, since they're a standing default, not a draft value.
+  static const _defaultFromName = 'Seanité';
+  static const _defaultFromPhone = '08131369382';
+
   final _numberController = TextEditingController();
   final _fromController = TextEditingController();
+  final _fromPhoneController = TextEditingController();
   final _toController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _productController = TextEditingController();
+  final _toPhoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  /// A delivery is rarely just one item, so products are a growable list of
+  /// fields rather than a single one. Kept `final` and mutated in place
+  /// (rather than reassigned) so dispose() always sees every controller ever
+  /// created, including ones added after the initial build.
+  final List<TextEditingController> _productControllers = [];
 
   AddressSuggestion? _pickedAddress;
   bool _reverseGeocoding = false;
@@ -62,26 +75,38 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
   void initState() {
     super.initState();
     _numberController.text = Receipt.generateNumber();
+    _fromController.text = _defaultFromName;
+    _fromPhoneController.text = _defaultFromPhone;
+    _productControllers.add(TextEditingController());
   }
 
   @override
   void dispose() {
     _numberController.dispose();
     _fromController.dispose();
+    _fromPhoneController.dispose();
     _toController.dispose();
-    _phoneController.dispose();
-    _productController.dispose();
+    _toPhoneController.dispose();
     _addressController.dispose();
+    _notesController.dispose();
+    for (final controller in _productControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   Receipt _buildReceipt() => Receipt(
     number: _numberController.text.trim(),
     from: _fromController.text.trim(),
+    fromPhone: _fromPhoneController.text.trim(),
     to: _toController.text.trim(),
-    phone: _phoneController.text.trim(),
-    productName: _productController.text.trim(),
+    toPhone: _toPhoneController.text.trim(),
+    products: _productControllers
+        .map((controller) => controller.text.trim())
+        .where((product) => product.isNotEmpty)
+        .toList(),
     address: _addressController.text.trim(),
+    notes: _notesController.text.trim(),
     latitude: _pickedAddress?.latitude,
     longitude: _pickedAddress?.longitude,
     issuedAt: DateTime.now(),
@@ -173,20 +198,35 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
     }
   }
 
+  void _addProduct() {
+    setState(() => _productControllers.add(TextEditingController()));
+  }
+
+  void _removeProduct(int index) {
+    setState(() => _productControllers.removeAt(index).dispose());
+  }
+
   void _resetForm() {
     _formKey.currentState?.reset();
     for (final controller in [
-      _fromController,
       _toController,
-      _phoneController,
-      _productController,
+      _toPhoneController,
       _addressController,
+      _notesController,
     ]) {
       controller.clear();
+    }
+    for (final controller in _productControllers) {
+      controller.dispose();
     }
     setState(() {
       _pickedAddress = null;
       _numberController.text = Receipt.generateNumber();
+      _fromController.text = _defaultFromName;
+      _fromPhoneController.text = _defaultFromPhone;
+      _productControllers
+        ..clear()
+        ..add(TextEditingController());
     });
     _showMessage('Formulir dikosongkan.');
   }
@@ -200,11 +240,11 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
   String? _required(String? value, String label) =>
       (value == null || value.trim().isEmpty) ? '$label wajib diisi' : null;
 
-  String? _validatePhone(String? value) {
-    final required = _required(value, 'Nomor telepon');
+  String? _validatePhone(String? value, String label) {
+    final required = _required(value, label);
     if (required != null) return required;
     final digits = value!.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.length < 7) return 'Nomor telepon tidak valid';
+    if (digits.length < 7) return '$label tidak valid';
     return null;
   }
 
@@ -273,6 +313,14 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
                     ),
                     const SizedBox(height: AppSpacing.betweenFields),
                     AppTextField(
+                      label: 'No. HP pengirim',
+                      hint: '08xx xxxx xxxx',
+                      controller: _fromPhoneController,
+                      keyboardType: TextInputType.phone,
+                      validator: (v) => _validatePhone(v, 'No. HP pengirim'),
+                    ),
+                    const SizedBox(height: AppSpacing.gutter),
+                    AppTextField(
                       label: 'Kepada',
                       hint: 'Nama penerima',
                       controller: _toController,
@@ -281,23 +329,11 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
                     ),
                     const SizedBox(height: AppSpacing.betweenFields),
                     AppTextField(
-                      label: 'Telepon',
+                      label: 'No. HP penerima',
                       hint: '08xx xxxx xxxx',
-                      controller: _phoneController,
+                      controller: _toPhoneController,
                       keyboardType: TextInputType.phone,
-                      validator: _validatePhone,
-                    ),
-                  ],
-                ),
-                AppCard(
-                  title: 'Produk',
-                  children: [
-                    AppTextField(
-                      label: 'Nama produk',
-                      hint: 'Apa yang dikirim',
-                      controller: _productController,
-                      textCapitalization: TextCapitalization.sentences,
-                      validator: (v) => _required(v, 'Nama produk'),
+                      validator: (v) => _validatePhone(v, 'No. HP penerima'),
                     ),
                   ],
                 ),
@@ -308,8 +344,11 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
                     PlaceAutocompleteField(
                       label: 'Alamat',
                       hint: 'Ketik, lalu pilih dari daftar',
+                      helper:
+                          'Bisa ditulis manual kalau jalannya tidak ada di peta.',
                       controller: _addressController,
-                      maxLines: 3,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.newline,
                       onSearch: widget.addressService.search,
                       onResolve: widget.addressService.resolve,
                       validator: (v) => _required(v, 'Alamat'),
@@ -348,6 +387,79 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
                           ],
                         ),
                       ),
+                  ],
+                ),
+                AppCard(
+                  title: 'Produk',
+                  children: [
+                    for (var i = 0; i < _productControllers.length; i++) ...[
+                      if (i > 0)
+                        const SizedBox(height: AppSpacing.betweenFields),
+                      AppTextField(
+                        label: i == 0 ? 'Nama produk' : 'Produk ${i + 1}',
+                        hint: 'Apa yang dikirim',
+                        controller: _productControllers[i],
+                        textCapitalization: TextCapitalization.sentences,
+                        // Only the first product is required; extra rows are
+                        // purely additive and a blank one is simply dropped.
+                        validator: i == 0
+                            ? (v) => _required(v, 'Nama produk')
+                            : null,
+                        suffix: _productControllers.length > 1
+                            ? GestureDetector(
+                                onTap: () => _removeProduct(i),
+                                behavior: HitTestBehavior.opaque,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                    color: palette.inkMuted,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ],
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: GestureDetector(
+                        onTap: _addProduct,
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.add_circle_outline_rounded,
+                              size: 16,
+                              color: palette.accent,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Tambah produk',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: palette.accent,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                AppCard(
+                  title: 'Catatan',
+                  children: [
+                    AppTextField(
+                      label: 'Catatan',
+                      hint: 'Instruksi tambahan, kalau ada',
+                      helper: 'Opsional.',
+                      controller: _notesController,
+                      textCapitalization: TextCapitalization.sentences,
+                      minLines: 2,
+                      maxLines: 4,
+                    ),
                   ],
                 ),
                 Center(

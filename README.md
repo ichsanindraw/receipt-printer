@@ -13,11 +13,12 @@ One codebase, running on **Android, iOS and the web**.
 
 | | |
 |---|---|
-| **Nomor resi** | Optional. Auto-generated as `RCP-yyyyMMdd-HHmm`, editable, regenerate button; blank omits the line from the print |
-| **Dari / Kepada** | Sender and recipient names |
-| **Telepon** | Recipient phone, validated |
-| **Nama produk** | What is being delivered |
-| **Alamat** | Type-ahead autocomplete backed by a real geocoder |
+| **Nomor resi** | Optional. Auto-generated as `RCP-yyyyMMdd-HHmm`, editable, regenerate button; blank omits the line from the print, with a footnote saying so |
+| **Dari** | Sender name and phone. Pre-filled with a standing default (`Seanité`) rather than blank, since the sender is almost always the same business; "Kosongkan formulir" restores the default rather than clearing it |
+| **Kepada** | Recipient name and phone, both validated |
+| **Produk** | One or more products — "Tambah produk" adds a row, each row past the first can be removed; only the first is required, blank extra rows are dropped rather than printed |
+| **Alamat** | Type-ahead autocomplete backed by a real geocoder, or free text — the field accepts Enter as a real line break, for a street the map provider does not know about |
+| **Catatan** | Optional free-text note |
 | **Peta** | The picked address is pinned on OpenStreetMap; tap the map to move the pin and the address is reverse-geocoded to match |
 | **Cetak resi** | Renders an 80 mm receipt PDF and opens the system print dialog |
 | **Pratinjau** | Full-screen preview with print and share actions |
@@ -248,6 +249,14 @@ factory — nothing else in the app knows which provider is in use.
 - Map tiles come from OpenStreetMap's public tile servers. Their tile usage
   policy applies; for real traffic, point `MapPreview` at your own tile source.
 - Shipping quotes exclude volume weight and insurance.
+- The address field takes free text as readily as a map suggestion — not every
+  street a courier needs is in the map provider's index — and accepts a real
+  line break on Enter rather than treating Enter as search/submit, so an
+  address can be hand-formatted across several lines. Both renderers pass an
+  embedded `\n` straight through to their underlying text APIs; on the
+  printer, an LF is a standard control byte every ESC/POS printer already
+  treats as "move to the next line," so no special line-splitting is needed
+  on this app's side.
 - Receipt values print at double height with single width, in font A. At the
   printer's base size they were too small to read on paper; single width keeps
   48 characters per line so long addresses still wrap where they did. Captions
@@ -259,9 +268,11 @@ factory — nothing else in the app knows which provider is in use.
   easy way to end up with a value in the wrong face without meaning to. The
   receipt number and date sit one size down from the field values, on the
   same reasoning: they're metadata, not the content the recipient needs.
-- A blank line follows every field (DARI, KEPADA, TELEPON, ALAMAT, PRODUK),
+- A blank line follows the sender group, the recipient group and the address,
   not just the section dividers — cheap on an 80 mm roll, and without it the
-  recipient's details ran together as one cramped block.
+  fields ran together as one cramped block. A name and its own phone (DARI +
+  NO. HP, KEPADA + NO. HP) stay flush together as one unit; the gap sits
+  between units, not inside one.
 - ESC/POS text mode has no font-family concept — a printer's text is drawn
   from whatever one or two fonts (usually called A and B) are burned into its
   own ROM, and no command can swap in a different typeface. Getting the app's

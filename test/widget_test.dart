@@ -36,10 +36,12 @@ void main() {
 
       expect(find.text('Nomor'), findsOneWidget);
       expect(find.text('Dari'), findsOneWidget);
+      expect(find.text('No. HP pengirim'), findsOneWidget);
       expect(find.text('Kepada'), findsOneWidget);
-      expect(find.text('Telepon'), findsOneWidget);
+      expect(find.text('No. HP penerima'), findsOneWidget);
       expect(find.text('Nama produk'), findsOneWidget);
       expect(find.text('Alamat'), findsOneWidget);
+      expect(find.text('Catatan'), findsOneWidget);
       expect(find.widgetWithText(AppButton, 'Cetak resi'), findsOneWidget);
     });
 
@@ -50,6 +52,15 @@ void main() {
       expect(field.controller?.text, matches(RegExp(r'^RCP-\d{8}-\d{4}$')));
     });
 
+    testWidgets('prefills the sender with its standing default', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+
+      expect(find.text('Seanité'), findsOneWidget);
+      expect(find.text('08131369382'), findsOneWidget);
+    });
+
     testWidgets('blocks printing until the form is valid', (tester) async {
       await pumpApp(tester);
 
@@ -57,8 +68,11 @@ void main() {
       await tester.pump();
 
       expect(find.text('Lengkapi dulu kolom yang ditandai.'), findsOneWidget);
-      expect(find.text('Nama pengirim wajib diisi'), findsOneWidget);
+      // The sender defaults are already valid, so only the recipient,
+      // product and address are left complaining.
+      expect(find.text('Nama pengirim wajib diisi'), findsNothing);
       expect(find.text('Nama penerima wajib diisi'), findsOneWidget);
+      expect(find.text('No. HP penerima wajib diisi'), findsOneWidget);
       expect(find.text('Nama produk wajib diisi'), findsOneWidget);
       expect(find.text('Alamat wajib diisi'), findsOneWidget);
     });
@@ -71,7 +85,7 @@ void main() {
       await tester.pump();
 
       // The other fields still complain; the number does not.
-      expect(find.text('Nama pengirim wajib diisi'), findsOneWidget);
+      expect(find.text('Nama penerima wajib diisi'), findsOneWidget);
       expect(find.textContaining('Nomor resi'), findsNothing);
       expect(
         find.text('Opsional — kosongkan kalau tidak dipakai.'),
@@ -82,11 +96,11 @@ void main() {
     testWidgets('rejects a phone number that is too short', (tester) async {
       await pumpApp(tester);
 
-      await tester.enterText(fieldFor('Telepon'), '123');
+      await tester.enterText(fieldFor('No. HP penerima'), '123');
       await tester.tap(find.widgetWithText(AppButton, 'Cetak resi'));
       await tester.pump();
 
-      expect(find.text('Nomor telepon tidak valid'), findsOneWidget);
+      expect(find.text('No. HP penerima tidak valid'), findsOneWidget);
     });
 
     testWidgets('a validation error clears once the field is filled', (
@@ -96,26 +110,81 @@ void main() {
 
       await tester.tap(find.widgetWithText(AppButton, 'Cetak resi'));
       await tester.pump();
-      expect(find.text('Nama pengirim wajib diisi'), findsOneWidget);
+      expect(find.text('Nama penerima wajib diisi'), findsOneWidget);
 
-      await tester.enterText(fieldFor('Dari'), 'Ichsan');
+      await tester.enterText(fieldFor('Kepada'), 'Ichsan');
       await tester.pump();
-      expect(find.text('Nama pengirim wajib diisi'), findsNothing);
+      expect(find.text('Nama penerima wajib diisi'), findsNothing);
     });
 
-    testWidgets('clearing the form regenerates the receipt number', (
+    testWidgets('a second product field can be added and removed', (
       tester,
     ) async {
       await pumpApp(tester);
 
-      await tester.enterText(fieldFor('Dari'), 'Ichsan');
+      expect(find.text('Produk 2'), findsNothing);
+      // With a single product, removing it is not offered at all.
+      expect(find.byIcon(Icons.close_rounded), findsNothing);
+
+      await tester.tap(find.text('Tambah produk'));
       await tester.pump();
-      expect(find.text('Ichsan'), findsOneWidget);
+      expect(find.text('Produk 2'), findsOneWidget);
+      // With two rows, both become removable — not just the one just added.
+      expect(find.byIcon(Icons.close_rounded), findsNWidgets(2));
+
+      // Rows render in order, so the second row's button is the last one.
+      await tester.tap(find.byIcon(Icons.close_rounded).last);
+      await tester.pump();
+      expect(find.text('Produk 2'), findsNothing);
+      expect(find.byIcon(Icons.close_rounded), findsNothing);
+    });
+
+    testWidgets(
+      'only the first product is required; extra blank rows are dropped',
+      (tester) async {
+        await pumpApp(tester);
+        await tester.enterText(fieldFor('Kepada'), 'Ichsan');
+        await tester.enterText(fieldFor('No. HP penerima'), '081234567890');
+        await tester.enterText(fieldFor('Nama produk'), 'Kopi');
+        await tester.enterText(fieldFor('Alamat'), 'Jl. Sudirman, Jakarta');
+
+        await tester.tap(find.text('Tambah produk'));
+        await tester.pump();
+        // Leave "Produk 2" blank.
+
+        await tester.tap(find.widgetWithText(AppButton, 'Cetak resi'));
+        await tester.pump();
+
+        expect(find.text('Lengkapi dulu kolom yang ditandai.'), findsNothing);
+      },
+    );
+
+    testWidgets('the notes field has no validator and stays optional', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await tester.tap(find.widgetWithText(AppButton, 'Cetak resi'));
+      await tester.pump();
+
+      expect(find.text('Catatan wajib diisi'), findsNothing);
+    });
+
+    testWidgets('clearing the form keeps the sender default', (tester) async {
+      await pumpApp(tester);
+
+      await tester.enterText(fieldFor('Dari'), 'Toko Lain');
+      await tester.enterText(fieldFor('Kepada'), 'Ichsan');
+      await tester.pump();
+      expect(find.text('Toko Lain'), findsOneWidget);
 
       await tester.tap(find.text('Kosongkan formulir'));
       await tester.pump();
 
+      expect(find.text('Toko Lain'), findsNothing);
       expect(find.text('Ichsan'), findsNothing);
+      // The sender default comes back rather than being blanked out too.
+      expect(find.text('Seanité'), findsOneWidget);
+      expect(find.text('08131369382'), findsOneWidget);
       expect(find.text('Formulir dikosongkan.'), findsOneWidget);
     });
   });

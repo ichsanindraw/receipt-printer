@@ -95,9 +95,10 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
   Receipt _sampleReceipt() => Receipt(
     number: Receipt.generateNumber(),
     from: 'Tes Printer',
+    fromPhone: '0812 3456 7890',
     to: 'Contoh Penerima',
-    phone: '0812 3456 7890',
-    productName: 'Contoh produk',
+    toPhone: '0895 3735 6500',
+    products: const ['Contoh produk'],
     address: 'Contoh alamat pengiriman, Jakarta',
     issuedAt: DateTime.now(),
   );

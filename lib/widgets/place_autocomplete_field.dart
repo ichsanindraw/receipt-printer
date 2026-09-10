@@ -29,6 +29,7 @@ class PlaceAutocompleteField extends StatefulWidget {
     this.validator,
     this.onCleared,
     this.maxLines = 1,
+    this.textInputAction = TextInputAction.search,
   });
 
   final TextEditingController controller;
@@ -47,6 +48,12 @@ class PlaceAutocompleteField extends StatefulWidget {
   final String? helper;
   final String? Function(String?)? validator;
   final int maxLines;
+
+  /// Defaults to search, which shows a search-style return key that submits
+  /// rather than inserting a line break. Pass [TextInputAction.newline] for a
+  /// multi-line field the user needs to hand-format — an address the map
+  /// provider does not know, for instance — so Enter behaves like Enter.
+  final TextInputAction textInputAction;
 
   @override
   State<PlaceAutocompleteField> createState() => _PlaceAutocompleteFieldState();
@@ -180,7 +187,7 @@ class _PlaceAutocompleteFieldState extends State<PlaceAutocompleteField> {
           minLines: 1,
           maxLines: widget.maxLines,
           keyboardType: TextInputType.streetAddress,
-          textInputAction: TextInputAction.search,
+          textInputAction: widget.textInputAction,
           onChanged: _onChanged,
           suffix: busy
               ? Padding(

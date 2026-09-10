@@ -5,9 +5,10 @@ void main() {
   Receipt sample({double? lat, double? lng}) => Receipt(
     number: 'RCP-20260909-1432',
     from: 'Ichsan',
+    fromPhone: '+62 812 3456 7890',
     to: 'Budi',
-    phone: '+62 812 3456 7890',
-    productName: 'Espresso Machine',
+    toPhone: '0895 3735 6500',
+    products: const ['Espresso Machine'],
     address: 'Jl. Sudirman No. 1, Jakarta',
     latitude: lat,
     longitude: lng,
@@ -24,15 +25,20 @@ void main() {
       expect(sample().formattedIssuedAt, '09 Sep 2026, 14:32');
     });
 
+    test('notes default to an empty string when not supplied', () {
+      expect(sample().notes, isEmpty);
+    });
+
     test('file label falls back to the date when there is no number', () {
       expect(sample().fileLabel, 'receipt-RCP-20260909-1432');
 
       final unnumbered = Receipt(
         number: '',
         from: 'Ichsan',
+        fromPhone: '0812',
         to: 'Budi',
-        phone: '0812',
-        productName: 'Kopi',
+        toPhone: '0895',
+        products: const ['Kopi'],
         address: 'Jakarta',
         issuedAt: DateTime(2026, 9, 9, 14, 32),
       );
