@@ -42,6 +42,9 @@ class NominatimAddressService implements AddressService {
       'format': 'jsonv2',
       'addressdetails': '1',
       'limit': '6',
+      // Deliveries are domestic only, so results outside Indonesia are
+      // useless here regardless of what word the user typed.
+      'countrycodes': 'id',
     });
 
     final body = await _get(uri);
@@ -72,6 +75,13 @@ class NominatimAddressService implements AddressService {
     if (decoded is! Map<String, dynamic> || decoded['display_name'] == null) {
       return null;
     }
+
+    // /reverse has no country filter to put on the request — it resolves
+    // whatever point you give it — so a tap outside Indonesia is rejected
+    // after the fact using the country_code addressdetails already asked for.
+    final address = decoded['address'] as Map<String, dynamic>?;
+    if (address?['country_code'] != 'id') return null;
+
     return _toSuggestion(
       decoded,
     ).copyWith(latitude: latitude, longitude: longitude);

@@ -35,7 +35,12 @@ class GooglePlacesAddressService implements AddressService {
       () => _client.post(
         Uri.https(_placesHost, '/v1/places:autocomplete'),
         headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey},
-        body: jsonEncode({'input': trimmed}),
+        body: jsonEncode({
+          'input': trimmed,
+          // Deliveries are domestic only, so results outside Indonesia are
+          // useless here regardless of what word the user typed.
+          'includedRegionCodes': ['ID'],
+        }),
       ),
     );
 
@@ -106,6 +111,19 @@ class GooglePlacesAddressService implements AddressService {
     if (results.isEmpty) return null;
 
     final first = results.first as Map<String, dynamic>;
+
+    // The Geocoding API's region biasing only affects forward geocoding, so
+    // a tap outside Indonesia is rejected after the fact by checking the
+    // country component every result already carries.
+    final components =
+        first['address_components'] as List<dynamic>? ?? const [];
+    final isIndonesia = components.any((component) {
+      final map = component as Map<String, dynamic>;
+      final types = (map['types'] as List<dynamic>? ?? const []).cast<String>();
+      return types.contains('country') && map['short_name'] == 'ID';
+    });
+    if (!isIndonesia) return null;
+
     return AddressSuggestion(
       description: first['formatted_address'] as String? ?? '',
       placeId: first['place_id'] as String?,

@@ -119,6 +119,15 @@ Enable both *Places API (New)* and *Geocoding API* for that key — the first
 powers autocomplete and place details, the second powers reverse geocoding when
 the user taps the map. The active provider is shown as a chip on the card.
 
+Both providers are restricted to Indonesia, since deliveries are domestic
+only. Typed search is filtered at the request level (`countrycodes=id` for
+Nominatim, `includedRegionCodes: ["ID"]` for Google) so a name that also
+exists abroad — "Kuala Lumpur" is a village in Gorontalo — resolves inside
+Indonesia. Reverse geocoding (tapping the map) has no such request-level
+filter on either API, so a tap outside Indonesia is rejected after the fact
+by checking the country the response already carries, and treated the same
+as tapping empty ocean.
+
 > Nominatim asks for at most one request per second per client. Keystrokes are
 > debounced by 450 ms and every request is superseded by the next one, which
 > keeps usage well inside that limit for interactive typing. For production
