@@ -83,6 +83,19 @@ class IoThermalPrinterService implements ThermalPrinterService {
   static const int _chunkBytes = 512;
   static const Duration _chunkPause = Duration(milliseconds: 20);
 
+  /// Pause before retrying a failed connect, and how many extra attempts
+  /// beyond the first are worth making.
+  ///
+  /// The very first `connect()` to a printer that is on, paired, and in
+  /// range routinely fails on Android's classic Bluetooth socket — not
+  /// because anything is actually wrong — and a second attempt right after
+  /// succeeds. Without a retry here, that meant the very first "Cetak resi"
+  /// after picking a printer always failed, and only worked once "Tes
+  /// cetak" (or another failed print) had already burned through that first
+  /// bad attempt.
+  static const Duration _reconnectPause = Duration(milliseconds: 400);
+  static const int _connectAttempts = 2;
+
   /// Splits a job into writes. Pure and exposed so the split can be tested:
   /// a bug here would silently corrupt every print.
   @visibleForTesting
@@ -159,9 +172,14 @@ class IoThermalPrinterService implements ThermalPrinterService {
       _connectedAddress = null;
     }
 
-    final connected = await PrintBluetoothThermal.connect(
-      macPrinterAddress: address,
-    );
+    var connected = false;
+    for (var attempt = 1; attempt <= _connectAttempts; attempt++) {
+      connected = await PrintBluetoothThermal.connect(
+        macPrinterAddress: address,
+      );
+      if (connected || attempt == _connectAttempts) break;
+      await Future<void>.delayed(_reconnectPause);
+    }
     if (!connected) {
       throw const ThermalPrinterException(
         'Tidak bisa terhubung ke printer. Pastikan printer menyala dan '

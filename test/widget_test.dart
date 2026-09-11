@@ -57,7 +57,7 @@ void main() {
     ) async {
       await pumpApp(tester);
 
-      expect(find.text('Seanité'), findsOneWidget);
+      expect(find.text('Seanite'), findsOneWidget);
       expect(find.text('08131369382'), findsOneWidget);
     });
 
@@ -183,7 +183,7 @@ void main() {
       expect(find.text('Toko Lain'), findsNothing);
       expect(find.text('Ichsan'), findsNothing);
       // The sender default comes back rather than being blanked out too.
-      expect(find.text('Seanité'), findsOneWidget);
+      expect(find.text('Seanite'), findsOneWidget);
       expect(find.text('08131369382'), findsOneWidget);
       expect(find.text('Formulir dikosongkan.'), findsOneWidget);
     });

@@ -77,7 +77,6 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       final bytes = await _escPosService.build(
         _sampleReceipt(),
         paperWidth: _settings.paperWidth,
-        cutPaper: _settings.cutPaper,
       );
       await widget.printerService.printBytes(
         bytes,

@@ -46,13 +46,13 @@ class ReceiptPdfService {
               _row('NO.', receipt.number, regular, bold),
             _row('DATE', receipt.formattedIssuedAt, regular, bold),
             _divider(),
-            _block('FROM', receipt.from, regular, bold),
-            _block('NO. HP', receipt.fromPhone, regular, bold, indent: true),
+            _row('FROM:', receipt.from, regular, bold),
+            _row('NO. HP:', receipt.fromPhone, regular, bold),
             pw.SizedBox(height: 8),
-            _block('TO', receipt.to, regular, bold),
-            _block('NO. HP', receipt.toPhone, regular, bold, indent: true),
+            _row('TO:', receipt.to, regular, bold),
+            _row('NO. HP:', receipt.toPhone, regular, bold),
             pw.SizedBox(height: 8),
-            _block('ADDRESS', receipt.address, regular, bold),
+            _block('ADDRESS:', receipt.address, regular, bold),
             if (receipt.hasCoordinates)
               pw.Padding(
                 padding: const pw.EdgeInsets.only(left: 8, top: 2),
@@ -66,17 +66,17 @@ class ReceiptPdfService {
                 ),
               ),
             _divider(),
-            _productList('PRODUCT', receipt.products, regular, bold),
+            _productList('PRODUCT:', receipt.products, regular, bold),
             if (receipt.notes.trim().isNotEmpty) ...[
               _divider(),
-              _block('NOTES', receipt.notes, regular, bold),
+              _block('NOTES:', receipt.notes, regular, bold),
             ],
             _divider(),
             // No maps QR code — the QR image itself was the single biggest
             // thing on the paper, and the coordinates already print as a
             // small text line under ADDRESS for anyone who wants to look
             // them up by hand.
-            _footer(regular, bold),
+            _footer(regular),
           ],
         ),
       ),
@@ -94,15 +94,22 @@ class ReceiptPdfService {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 3),
       child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        // center, not start: label and value share one font size now, but
+        // regular and bold Courier don't share identical ascent/descent, so
+        // top-aligning them could still read as a hair off; center keeps
+        // them level regardless.
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
+          // Wide enough for the longest label, 'NO. HP:', at this size —
+          // just wider was leaving a lopsided gap in front of short ones
+          // like 'TO:'.
           pw.SizedBox(
-            width: 52,
+            width: 40,
             child: pw.Text(
               label,
               style: pw.TextStyle(
                 font: regular,
-                fontSize: 8,
+                fontSize: 9,
                 color: PdfColors.grey700,
               ),
             ),
@@ -115,37 +122,28 @@ class ReceiptPdfService {
     );
   }
 
-  pw.Widget _block(
-    String label,
-    String value,
-    pw.Font regular,
-    pw.Font bold, {
-    bool indent = false,
-  }) {
-    return pw.Padding(
-      padding: pw.EdgeInsets.only(top: indent ? 4 : 0),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(
-            label,
-            style: pw.TextStyle(
-              font: regular,
-              fontSize: 7,
-              letterSpacing: 1.2,
-              color: PdfColors.grey700,
-            ),
+  pw.Widget _block(String label, String value, pw.Font regular, pw.Font bold) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            font: regular,
+            fontSize: 7,
+            letterSpacing: 1.2,
+            color: PdfColors.grey700,
           ),
-          pw.SizedBox(height: 2),
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(left: 8),
-            child: pw.Text(
-              value.isEmpty ? '-' : value,
-              style: pw.TextStyle(font: bold, fontSize: 9, lineSpacing: 1.5),
-            ),
+        ),
+        pw.SizedBox(height: 2),
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(left: 8),
+          child: pw.Text(
+            value.isEmpty ? '-' : value,
+            style: pw.TextStyle(font: bold, fontSize: 9, lineSpacing: 1.5),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -190,24 +188,11 @@ class ReceiptPdfService {
     );
   }
 
-  pw.Widget _footer(pw.Font regular, pw.Font bold) {
-    return pw.Column(
-      children: [
-        pw.Text(
-          'THANK YOU',
-          style: pw.TextStyle(font: bold, fontSize: 10, letterSpacing: 2),
-        ),
-        pw.SizedBox(height: 3),
-        pw.Text(
-          'This receipt was generated automatically.',
-          textAlign: pw.TextAlign.center,
-          style: pw.TextStyle(
-            font: regular,
-            fontSize: 7,
-            color: PdfColors.grey700,
-          ),
-        ),
-      ],
+  pw.Widget _footer(pw.Font regular) {
+    return pw.Text(
+      'This receipt was generated automatically.',
+      textAlign: pw.TextAlign.center,
+      style: pw.TextStyle(font: regular, fontSize: 7, color: PdfColors.grey700),
     );
   }
 }

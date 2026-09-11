@@ -102,7 +102,6 @@ void main() {
     expect(text, contains('089537356500'));
     expect(text, contains('Jl. Sudirman No. 1, Jakarta'));
     expect(text, contains('Espresso Machine'));
-    expect(text, contains('TERIMA KASIH'));
   });
 
   test('starts with the ESC @ initialise command', () async {
@@ -120,7 +119,7 @@ void main() {
 
   test('never prints a maps QR code, pinned or not', () async {
     // Regression: the QR image was the single biggest thing on the paper.
-    // The coordinates still print as a small text line under ALAMAT — that
+    // The coordinates still print as a small text line under ADDRESS — that
     // stays — but nothing invites a scan.
     final plain = textOf(await service.build(receipt()));
     expect(plain, isNot(contains('Scan')));
@@ -163,7 +162,7 @@ void main() {
 
   test('field captions stay smaller than their values', () async {
     final bytes = await service.build(receipt());
-    expect(heightMultiplier(sizeByteFor(bytes, 'ALAMAT')), 1);
+    expect(heightMultiplier(sizeByteFor(bytes, 'ADDRESS')), 1);
     expect(heightMultiplier(sizeByteFor(bytes, 'Jl. Sudirman')), 2);
   });
 
@@ -171,7 +170,7 @@ void main() {
     'the receipt number and date print smaller than the field values',
     () async {
       final bytes = await service.build(receipt());
-      // One size down from the double-height field values, so DARI/KEPADA/etc.
+      // One size down from the double-height field values, so FROM/TO/etc.
       // read as the content that matters most on the slip.
       expect(heightMultiplier(sizeByteFor(bytes, 'RCP-20260910-1432')), 1);
       expect(heightMultiplier(sizeByteFor(bytes, '10 Sep 2026')), 1);
@@ -187,7 +186,7 @@ void main() {
     // so this now also guards against either one drifting back to font B.
     final bytes = await service.build(receipt());
 
-    for (final caption in ['DARI', 'NO. HP', 'KEPADA', 'ALAMAT', 'PRODUK']) {
+    for (final caption in ['FROM', 'NO. HP', 'TO', 'ADDRESS', 'PRODUCT']) {
       expect(fontFor(bytes, caption), 0, reason: '$caption should be font A');
     }
     for (final value in [
@@ -200,7 +199,6 @@ void main() {
     ]) {
       expect(fontFor(bytes, value), 0, reason: '"$value" should be font A');
     }
-    expect(fontFor(bytes, 'TERIMA KASIH'), 0);
   });
 
   test('the coordinates footnote deliberately stays in font B', () async {
@@ -210,7 +208,7 @@ void main() {
 
   test('captions are not bold, unlike the values they introduce', () async {
     final bytes = await service.build(receipt());
-    for (final caption in ['DARI', 'NO. HP', 'KEPADA', 'ALAMAT', 'PRODUK']) {
+    for (final caption in ['FROM', 'NO. HP', 'TO', 'ADDRESS', 'PRODUCT']) {
       expect(
         isBold(bytes, caption),
         isFalse,
@@ -223,24 +221,30 @@ void main() {
   test('the sender and recipient phone sit under their own name', () async {
     final bytes = await service.build(receipt());
 
-    final dari = indexOfText(bytes, 'DARI');
+    final fromLabel = indexOfText(bytes, 'FROM');
     final firstNoHp = indexOfText(bytes, 'NO. HP');
     final fromPhone = indexOfText(bytes, '081234567890');
-    final kepada = indexOfText(bytes, 'KEPADA');
+    // 'TO' alone risks matching inside unrelated text; the colon narrows it
+    // to the actual label.
+    final toLabel = indexOfText(bytes, 'TO:');
     final secondNoHp = indexOfText(bytes, 'NO. HP', from: firstNoHp + 1);
     final toPhone = indexOfText(bytes, '089537356500');
 
-    expect(dari, greaterThan(-1), reason: 'DARI missing');
-    expect(firstNoHp, greaterThan(dari), reason: 'sender NO. HP out of order');
+    expect(fromLabel, greaterThan(-1), reason: 'FROM missing');
+    expect(
+      firstNoHp,
+      greaterThan(fromLabel),
+      reason: 'sender NO. HP out of order',
+    );
     expect(
       fromPhone,
       greaterThan(firstNoHp),
       reason: 'sender phone out of order',
     );
-    expect(kepada, greaterThan(fromPhone), reason: 'KEPADA out of order');
+    expect(toLabel, greaterThan(fromPhone), reason: 'TO out of order');
     expect(
       secondNoHp,
-      greaterThan(kepada),
+      greaterThan(toLabel),
       reason: 'recipient NO. HP out of order',
     );
     expect(
@@ -266,22 +270,22 @@ void main() {
       expect(
         hasFeedCommand(bytes, endOf('Ichsan'), firstNoHp),
         isFalse,
-        reason: 'DARI and its own NO. HP should stay flush together',
+        reason: 'FROM and its own NO. HP should stay flush together',
       );
       expect(
-        hasFeedCommand(bytes, endOf('081234567890'), startOf('KEPADA')),
+        hasFeedCommand(bytes, endOf('081234567890'), startOf('TO:')),
         isTrue,
-        reason: 'no gap between the sender group and KEPADA',
+        reason: 'no gap between the sender group and TO',
       );
       expect(
         hasFeedCommand(bytes, endOf('Budi'), secondNoHp),
         isFalse,
-        reason: 'KEPADA and its own NO. HP should stay flush together',
+        reason: 'TO and its own NO. HP should stay flush together',
       );
       expect(
-        hasFeedCommand(bytes, endOf('089537356500'), startOf('ALAMAT')),
+        hasFeedCommand(bytes, endOf('089537356500'), startOf('ADDRESS')),
         isTrue,
-        reason: 'no gap between the recipient group and ALAMAT',
+        reason: 'no gap between the recipient group and ADDRESS',
       );
     },
   );
@@ -332,28 +336,28 @@ void main() {
 
     test('an empty product list prints a dash rather than nothing', () async {
       final text = textOf(await service.build(receipt(products: const [])));
-      expect(text, contains('PRODUK'));
+      expect(text, contains('PRODUCT'));
       expect(text, isNot(contains('*')));
     });
   });
 
   group('notes', () {
-    test('a CATATAN section prints only when notes are given', () async {
+    test('a NOTES section prints only when notes are given', () async {
       final withoutNotes = textOf(await service.build(receipt()));
-      expect(withoutNotes, isNot(contains('CATATAN')));
+      expect(withoutNotes, isNot(contains('NOTES')));
 
       final withNotes = textOf(
         await service.build(
           receipt(notes: 'Titip di satpam kalau tidak ada orang.'),
         ),
       );
-      expect(withNotes, contains('CATATAN'));
+      expect(withNotes, contains('NOTES'));
       expect(withNotes, contains('Titip di satpam kalau tidak ada orang.'));
     });
 
     test('whitespace-only notes count as no notes', () async {
       final text = textOf(await service.build(receipt(notes: '   ')));
-      expect(text, isNot(contains('CATATAN')));
+      expect(text, isNot(contains('NOTES')));
     });
   });
 
@@ -363,7 +367,7 @@ void main() {
       // 'NO. HP' would satisfy a bare contains('NO.') check regardless of
       // whether the number row itself printed, so check the header
       // specifically, before either phone caption exists in the stream.
-      final header = textOf(bytes.sublist(0, indexOfText(bytes, 'DARI')));
+      final header = textOf(bytes.sublist(0, indexOfText(bytes, 'FROM')));
       expect(header, contains('NO.'));
       expect(header, contains('RCP-20260910-1432'));
     });
@@ -385,10 +389,10 @@ void main() {
       // No. 1...') both legitimately contain the substring 'NO.', so the
       // absence check only makes sense against the header, before either of
       // those exists in the stream.
-      final header = textOf(bytes.sublist(0, indexOfText(bytes, 'DARI')));
+      final header = textOf(bytes.sublist(0, indexOfText(bytes, 'FROM')));
       expect(header, isNot(contains('NO.')));
       // The date line still prints.
-      expect(header, contains('TGL'));
+      expect(header, contains('DATE'));
       expect(header, contains('10 Sep 2026'));
     });
 
@@ -405,12 +409,12 @@ void main() {
       );
 
       final text = textOf(await service.build(blank));
-      expect(text, contains('Nomor resi tidak diisi'));
+      expect(text, contains('Receipt number left blank'));
     });
 
     test('says nothing extra when a number is set', () async {
       final text = textOf(await service.build(receipt()));
-      expect(text, isNot(contains('Nomor resi tidak diisi')));
+      expect(text, isNot(contains('Receipt number left blank')));
     });
   });
 
@@ -422,18 +426,24 @@ void main() {
     expect(narrow.length, lessThan(wide.length));
   });
 
-  test('the cut command can be turned off', () async {
-    const cut = [0x1D, 0x56]; // GS V
-    bool hasCut(List<int> bytes) {
-      for (var i = 0; i < bytes.length - 1; i++) {
-        if (bytes[i] == cut[0] && bytes[i + 1] == cut[1]) return true;
+  test(
+    'never sends a cut command — the customer tears the paper off by hand',
+    () async {
+      // Regression: generator.cut() feeds 5 blank lines internally before
+      // firing the blade. Calling it on top of our own trailing feed left a
+      // wall of blank paper below the last divider, so the receipt no longer
+      // cuts at all — cutter or not, the customer tears it off.
+      const cut = [0x1D, 0x56]; // GS V
+      bool hasCut(List<int> bytes) {
+        for (var i = 0; i < bytes.length - 1; i++) {
+          if (bytes[i] == cut[0] && bytes[i + 1] == cut[1]) return true;
+        }
+        return false;
       }
-      return false;
-    }
 
-    expect(hasCut(await service.build(receipt())), isTrue);
-    expect(hasCut(await service.build(receipt(), cutPaper: false)), isFalse);
-  });
+      expect(hasCut(await service.build(receipt())), isFalse);
+    },
+  );
 
   test('an empty optional field prints a dash rather than nothing', () async {
     final blank = Receipt(

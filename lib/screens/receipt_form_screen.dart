@@ -44,7 +44,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
   // The sender is almost always the same business, so it starts pre-filled
   // rather than blank — "Kosongkan formulir" restores these two rather than
   // clearing them, since they're a standing default, not a draft value.
-  static const _defaultFromName = 'Seanité';
+  static const _defaultFromName = 'Seanite';
   static const _defaultFromPhone = '08131369382';
 
   final _numberController = TextEditingController();
@@ -146,7 +146,6 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
     final bytes = await _escPosService.build(
       receipt,
       paperWidth: settings.paperWidth,
-      cutPaper: settings.cutPaper,
     );
     await widget.printerService.printBytes(
       bytes,
@@ -422,27 +421,29 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
                       ),
                     ],
                     Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: GestureDetector(
-                        onTap: _addProduct,
-                        behavior: HitTestBehavior.opaque,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.add_circle_outline_rounded,
-                              size: 16,
-                              color: palette.accent,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Tambah produk',
-                              style: theme.textTheme.labelSmall?.copyWith(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: _addProduct,
+                          behavior: HitTestBehavior.opaque,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.add_circle_outline_rounded,
+                                size: 16,
                                 color: palette.accent,
-                                letterSpacing: 0.2,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              Text(
+                                'Tambah produk',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: palette.accent,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

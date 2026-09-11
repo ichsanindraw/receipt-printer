@@ -11,17 +11,17 @@ One codebase, running on **Android, iOS and the web**.
 
 ## Resi
 
-| | |
-|---|---|
-| **Nomor resi** | Optional. Auto-generated as `RCP-yyyyMMdd-HHmm`, editable, regenerate button; blank omits the line from the print, with a footnote saying so |
-| **Dari** | Sender name and phone. Pre-filled with a standing default (`Seanité`) rather than blank, since the sender is almost always the same business; "Kosongkan formulir" restores the default rather than clearing it |
-| **Kepada** | Recipient name and phone, both validated |
-| **Produk** | One or more products — "Tambah produk" adds a row, each row past the first can be removed; only the first is required, blank extra rows are dropped rather than printed |
-| **Alamat** | Type-ahead autocomplete backed by a real geocoder, or free text — the field accepts Enter as a real line break, for a street the map provider does not know about |
-| **Catatan** | Optional free-text note |
-| **Peta** | The picked address is pinned on OpenStreetMap; tap the map to move the pin and the address is reverse-geocoded to match |
-| **Cetak resi** | Renders an 80 mm receipt PDF and opens the system print dialog |
-| **Pratinjau** | Full-screen preview with print and share actions |
+|                |                                                                                                                                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Nomor resi** | Optional. Auto-generated as `RCP-yyyyMMdd-HHmm`, editable, regenerate button; blank omits the line from the print, with a footnote saying so                                                                    |
+| **Dari**       | Sender name and phone. Pre-filled with a standing default (`Seanite`) rather than blank, since the sender is almost always the same business; "Kosongkan formulir" restores the default rather than clearing it |
+| **Kepada**     | Recipient name and phone, both validated                                                                                                                                                                        |
+| **Produk**     | One or more products — "Tambah produk" adds a row, each row past the first can be removed; only the first is required, blank extra rows are dropped rather than printed                                         |
+| **Alamat**     | Type-ahead autocomplete backed by a real geocoder, or free text — the field accepts Enter as a real line break, for a street the map provider does not know about                                               |
+| **Catatan**    | Optional free-text note                                                                                                                                                                                         |
+| **Peta**       | The picked address is pinned on OpenStreetMap; tap the map to move the pin and the address is reverse-geocoded to match                                                                                         |
+| **Cetak resi** | Renders an 80 mm receipt PDF and opens the system print dialog                                                                                                                                                  |
+| **Pratinjau**  | Full-screen preview with print and share actions                                                                                                                                                                |
 
 The printed receipt has no masthead — it starts straight at NO./TGL rather
 than a RECEIPT title and app name, and carries no maps QR code either; both
@@ -53,10 +53,10 @@ run a test print.
 
 There are two print paths, and the app picks one automatically:
 
-| Printer paired | What happens |
-|---|---|
-| Yes | The receipt is rendered as **ESC/POS** commands and sent straight to the thermal printer |
-| No | Falls back to the **system print dialog** — AirPrint, Android Print, or the browser dialog — with the PDF receipt |
+| Printer paired | What happens                                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Yes            | The receipt is rendered as **ESC/POS** commands and sent straight to the thermal printer                          |
+| No             | Falls back to the **system print dialog** — AirPrint, Android Print, or the browser dialog — with the PDF receipt |
 
 The fallback matters: `Printing.layoutPdf` reaches office and network printers
 but cannot talk to a Bluetooth thermal printer, and the Bluetooth plugin has no
@@ -119,7 +119,7 @@ Same pattern, two providers:
 flutter run --dart-define=GOOGLE_PLACES_API_KEY=your_key_here
 ```
 
-Enable both *Places API (New)* and *Geocoding API* for that key — the first
+Enable both _Places API (New)_ and _Geocoding API_ for that key — the first
 powers autocomplete and place details, the second powers reverse geocoding when
 the user taps the map. The active provider is shown as a chip on the card.
 

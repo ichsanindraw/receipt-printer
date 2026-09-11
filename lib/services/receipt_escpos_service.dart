@@ -41,7 +41,6 @@ class ReceiptEscPosService {
   Future<List<int>> build(
     Receipt receipt, {
     PaperWidth paperWidth = PaperWidth.mm80,
-    bool cutPaper = true,
   }) async {
     final profile = await CapabilityProfile.load();
     final generator = Generator(_paperSize(paperWidth), profile);
@@ -52,19 +51,43 @@ class ReceiptEscPosService {
       // is worth saving. The receipt starts straight at its own metadata.
       // The receipt number is optional; skip the line rather than print a dash.
       if (receipt.number.isNotEmpty) ..._pair(generator, 'NO.', receipt.number),
-      ..._pair(generator, 'TGL', receipt.formattedIssuedAt),
+      ..._pair(generator, 'DATE', receipt.formattedIssuedAt),
       ...generator.hr(),
       // A blank line after each name+phone group and after the address, not
       // just at the section dividers — previously only the dividers gave any
       // breathing room. Name and phone stay flush together within a group;
       // the coordinates line stays flush under the address it belongs to.
-      ..._block(generator, 'DARI', receipt.from),
-      ..._block(generator, 'NO. HP', receipt.fromPhone),
+      ..._pair(
+        generator,
+        'FROM:',
+        receipt.from,
+        alignRight: false,
+        valueStyles: _value,
+      ),
+      ..._pair(
+        generator,
+        'NO. HP:',
+        receipt.fromPhone,
+        alignRight: false,
+        valueStyles: _value,
+      ),
       ...generator.feed(1),
-      ..._block(generator, 'KEPADA', receipt.to),
-      ..._block(generator, 'NO. HP', receipt.toPhone),
+      ..._pair(
+        generator,
+        'TO:',
+        receipt.to,
+        alignRight: false,
+        valueStyles: _value,
+      ),
+      ..._pair(
+        generator,
+        'NO. HP:',
+        receipt.toPhone,
+        alignRight: false,
+        valueStyles: _value,
+      ),
       ...generator.feed(1),
-      ..._block(generator, 'ALAMAT', receipt.address),
+      ..._block(generator, 'ADDRESS:', receipt.address),
       if (receipt.hasCoordinates)
         ...generator.text(
           receipt.formattedCoordinates,
@@ -72,11 +95,11 @@ class ReceiptEscPosService {
         ),
       ...generator.feed(1),
       ...generator.hr(),
-      ..._productList(generator, 'PRODUK', receipt.products),
+      ..._productList(generator, 'PRODUCT:', receipt.products),
       if (receipt.notes.trim().isNotEmpty) ...[
         ...generator.feed(1),
         ...generator.hr(),
-        ..._block(generator, 'CATATAN', receipt.notes),
+        ..._block(generator, 'NOTES:', receipt.notes),
       ],
       ...generator.feed(1),
       ...generator.hr(),
@@ -84,25 +107,15 @@ class ReceiptEscPosService {
 
     // No maps QR code — the QR image itself was the single biggest thing on
     // the paper, and the coordinates already print as a small text line
-    // under ALAMAT for anyone who wants to look them up by hand.
-    bytes.addAll(
-      generator.text(
-        'TERIMA KASIH',
-        styles: const PosStyles(
-          align: PosAlign.center,
-          bold: true,
-          height: PosTextSize.size2,
-          fontType: PosFontType.fontA,
-        ),
-      ),
-    );
+    // under ADDRESS for anyone who wants to look them up by hand.
+
     // The receipt number is optional and, when left blank, its row is
     // omitted entirely rather than printed empty — this explains that
     // absence to whoever is holding the paper.
     if (receipt.number.isEmpty) {
       bytes.addAll(
         generator.text(
-          'Nomor resi tidak diisi',
+          'Receipt number left blank',
           styles: const PosStyles(
             align: PosAlign.center,
             fontType: PosFontType.fontB,
@@ -110,8 +123,12 @@ class ReceiptEscPosService {
         ),
       );
     }
+    // No cut command: the printer's own cutter (when it has one) always
+    // feeds several blank lines on its own before firing the blade, so an
+    // explicit cut() here just doubled up on top of that. Feeding a couple
+    // of lines and leaving the tear to the customer avoids that, on both
+    // cutter and non-cutter printers alike.
     bytes.addAll(generator.feed(2));
-    if (cutPaper) bytes.addAll(generator.cut());
 
     return bytes;
   }
@@ -119,14 +136,28 @@ class ReceiptEscPosService {
   static PaperSize _paperSize(PaperWidth width) =>
       width == PaperWidth.mm58 ? PaperSize.mm58 : PaperSize.mm80;
 
-  /// A label/value line, label left and value right.
-  List<int> _pair(Generator generator, String label, String value) {
+  /// A label/value line, label left and value right by default. NO./DATE keep
+  /// the right-aligned meta value; FROM/TO/NO. HP pass `alignRight: false`
+  /// and the double-height `_value` style so the value reads naturally beside
+  /// the label — mirroring the PDF — without losing the size that makes it
+  /// legible. Double height doesn't cost column width here: the generator
+  /// only scales character width off the *width* multiplier, which `_value`
+  /// leaves at 1, so it fits the same character count as a single-height row.
+  List<int> _pair(
+    Generator generator,
+    String label,
+    String value, {
+    bool alignRight = true,
+    PosStyles? valueStyles,
+  }) {
     return generator.row([
       PosColumn(text: label, width: 3),
       PosColumn(
-        text: value,
+        text: value.isEmpty ? '-' : value,
         width: 9,
-        styles: _metaValue.copyWith(align: PosAlign.right),
+        styles: (valueStyles ?? _metaValue).copyWith(
+          align: alignRight ? PosAlign.right : PosAlign.left,
+        ),
       ),
     ]);
   }
