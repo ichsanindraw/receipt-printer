@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:printing/printing.dart';
 
 import '../models/address_suggestion.dart';
+import '../models/customer.dart';
 import '../models/printer_settings.dart';
 import '../models/receipt.dart';
 import '../services/address_service.dart';
+import '../services/customer_history_service.dart';
 import '../services/receipt_escpos_service.dart';
 import '../services/receipt_pdf_service.dart';
 import '../services/thermal_printer_service.dart';
@@ -13,6 +17,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/customer_history_sheet.dart';
 import '../widgets/map_preview.dart';
 import '../widgets/place_autocomplete_field.dart';
 import 'receipt_preview_screen.dart';
@@ -24,6 +29,7 @@ class ReceiptFormScreen extends StatefulWidget {
     required this.addressService,
     required this.printerService,
     required this.printerSettings,
+    required this.customerHistoryService,
   });
 
   final AddressService addressService;
@@ -32,6 +38,10 @@ class ReceiptFormScreen extends StatefulWidget {
   /// When a thermal printer is paired the receipt goes straight to it;
   /// otherwise printing falls back to the platform print dialog.
   final PrinterSettings printerSettings;
+
+  /// Local history of recipients who have ordered before, so a repeat order
+  /// can be searched and applied to the form in one tap.
+  final CustomerHistoryService customerHistoryService;
 
   @override
   State<ReceiptFormScreen> createState() => _ReceiptFormScreenState();
@@ -64,6 +74,11 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
   AddressSuggestion? _pickedAddress;
   bool _reverseGeocoding = false;
   bool _printing = false;
+
+  /// Whether printing this receipt also saves its recipient to the local
+  /// customer history. Checked by default since that is the point of the
+  /// history, but a one-off order may not need to be remembered.
+  bool _saveToHistory = true;
 
   static const _pdfService = ReceiptPdfService();
   static const _escPosService = ReceiptEscPosService();
@@ -122,6 +137,13 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
     if (_printing || !_validate()) return;
 
     final receipt = _buildReceipt();
+    if (_saveToHistory) {
+      // Fire-and-forget: saving history is a nice-to-have, not something
+      // that should ever block or crash printing — same stance as
+      // PrinterSettingsStore for its own platform-channel failures.
+      unawaited(_recordCustomerHistory(receipt));
+    }
+
     final settings = widget.printerSettings;
     setState(() => _printing = true);
     try {
@@ -136,6 +158,14 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
       _showMessage('Gagal mencetak: $error');
     } finally {
       if (mounted) setState(() => _printing = false);
+    }
+  }
+
+  Future<void> _recordCustomerHistory(Receipt receipt) async {
+    try {
+      await widget.customerHistoryService.saveFromReceipt(receipt);
+    } catch (error) {
+      debugPrint('Could not save customer history: $error');
     }
   }
 
@@ -197,6 +227,40 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
     }
   }
 
+  Future<void> _openCustomerHistory() async {
+    FocusScope.of(context).unfocus();
+    final customer = await CustomerHistorySheet.show(
+      context,
+      widget.customerHistoryService,
+    );
+    if (customer != null && mounted) _applyCustomer(customer);
+  }
+
+  void _applyCustomer(Customer customer) {
+    setState(() {
+      _toController.text = customer.name;
+      _toPhoneController.text = customer.phone;
+      _addressController.text = customer.address;
+      _pickedAddress = customer.hasCoordinates
+          ? AddressSuggestion(
+              description: customer.address,
+              latitude: customer.latitude,
+              longitude: customer.longitude,
+            )
+          : null;
+      _notesController.text = customer.notes;
+
+      for (final controller in _productControllers) {
+        controller.dispose();
+      }
+      final products = customer.products.isEmpty ? [''] : customer.products;
+      _productControllers
+        ..clear()
+        ..addAll(products.map((text) => TextEditingController(text: text)));
+    });
+    _showMessage('Data ${customer.name} diterapkan ke formulir.');
+  }
+
   void _addProduct() {
     setState(() => _productControllers.add(TextEditingController()));
   }
@@ -226,6 +290,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
       _productControllers
         ..clear()
         ..add(TextEditingController());
+      _saveToHistory = true;
     });
     _showMessage('Formulir dikosongkan.');
   }
@@ -302,6 +367,27 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
                 ),
                 AppCard(
                   title: 'Pengirim & penerima',
+                  trailing: GestureDetector(
+                    onTap: _openCustomerHistory,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.history_rounded,
+                          size: 15,
+                          color: palette.accent,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Riwayat',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: palette.accent,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   children: [
                     AppTextField(
                       label: 'Dari',
@@ -505,28 +591,83 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
           AppSpacing.gutter,
           12,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: AppButton(
-                label: 'Pratinjau',
-                icon: Icons.visibility_outlined,
-                variant: AppButtonVariant.outlined,
-                onPressed: _printing ? null : _preview,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: AppButton(
-                label: _printing ? 'Menyiapkan…' : 'Cetak resi',
-                icon: Icons.print_outlined,
-                busy: _printing,
-                onPressed: _printing ? null : _print,
-              ),
+            _saveToHistoryToggle(context),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: 'Pratinjau',
+                    icon: Icons.visibility_outlined,
+                    variant: AppButtonVariant.outlined,
+                    onPressed: _printing ? null : _preview,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: AppButton(
+                    label: _printing ? 'Menyiapkan…' : 'Cetak resi',
+                    icon: Icons.print_outlined,
+                    busy: _printing,
+                    onPressed: _printing ? null : _print,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _saveToHistoryToggle(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = AppPalette.of(context);
+
+    return GestureDetector(
+      onTap: _printing
+          ? null
+          : () => setState(() => _saveToHistory = !_saveToHistory),
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color: _saveToHistory
+                  ? theme.colorScheme.primary
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(
+                color: _saveToHistory
+                    ? theme.colorScheme.primary
+                    : palette.hairline,
+                width: 1.4,
+              ),
+            ),
+            child: _saveToHistory
+                ? Icon(
+                    Icons.check_rounded,
+                    size: 13,
+                    color: theme.colorScheme.onPrimary,
+                  )
+                : null,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Simpan pelanggan ini ke riwayat',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        ],
       ),
     );
   }

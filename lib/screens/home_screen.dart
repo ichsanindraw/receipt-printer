@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/printer_settings.dart';
 import '../services/address_service.dart';
 import '../services/address_service_factory.dart';
+import '../services/customer_history_service.dart';
 import '../services/shipping_rate_service.dart';
 import '../services/printer_settings_store.dart';
 import '../services/shipping_rate_service_factory.dart';
@@ -29,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late final AddressService _addressService;
   late final ShippingRateService _shippingService;
   late final ThermalPrinterService _printerService;
+  late final CustomerHistoryService _customerHistoryService;
 
   static const _settingsStore = PrinterSettingsStore();
 
@@ -48,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _addressService = createAddressService();
     _shippingService = createShippingRateService(geocoder: _addressService);
     _printerService = createThermalPrinterService();
+    _customerHistoryService = createCustomerHistoryService();
     _loadPrinterSettings();
   }
 
@@ -175,6 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     addressService: _addressService,
                     printerService: _printerService,
                     printerSettings: _printerSettings,
+                    customerHistoryService: _customerHistoryService,
                   ),
                   PrintImageScreen(
                     printerService: _printerService,
