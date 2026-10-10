@@ -1,0 +1,149 @@
+# Builds and uploads release builds to Firebase App Distribution.
+#
+# Trigger: push any branch with "[distribute app]" somewhere in the HEAD
+# commit message, e.g. `git commit -m "Fix crash [distribute app]"`.
+#
+# Firebase project: receipt-printer-ichsan
+#   https://console.firebase.google.com/project/receipt-printer-ichsan/overview
+# Tester group: "testers" (manage members at the link above, under App
+# Distribution > Testers & Groups).
+#
+# Android is ready to go out of the box — it reuses this repo's existing
+# release signing config (android/app/build.gradle.kts), which currently
+# signs release builds with the debug key. That's fine for distributing to
+# testers; set up a dedicated release keystore before ever shipping to the
+# Play Store.
+#
+# iOS is disabled (see the `if:` on distribute-ios) until a paid Apple
+# Developer Program account is set up for this app's bundle id
+# (com.ichsanindraw.receiptPrinter) and the following are added:
+#   Secrets:
+#     APPLE_TEAM_ID                     - Developer Portal team ID
+#     IOS_DISTRIBUTION_CERTIFICATE_P12  - base64 of the .p12 distribution cert
+#     IOS_DISTRIBUTION_CERTIFICATE_PASSWORD - password used when exporting the .p12
+#     IOS_PROVISIONING_PROFILE          - base64 of the Ad Hoc .mobileprovision
+#   Then flip the repo variable IOS_DISTRIBUTION_READY to "true":
+#     gh variable set IOS_DISTRIBUTION_READY --body true
+
+name: Distribute
+
+on:
+  push:
+    branches: ['**']
+
+jobs:
+  distribute-android:
+    if: contains(github.event.head_commit.message, '[distribute app]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - name: Write Firebase service account key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+
+      - name: Distribute to Firebase App Distribution
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+          RELEASE_NOTES: ${{ github.event.head_commit.message }}
+        run: |
+          npm install -g firebase-tools@14
+          firebase appdistribution:distribute \
+            build/app/outputs/flutter-apk/app-release.apk \
+            --app 1:636894790223:android:dfb9d1a5fc42f188c0e03a \
+            --groups testers \
+            --release-notes "$RELEASE_NOTES" \
+            --project receipt-printer-ichsan
+
+  distribute-ios:
+    if: contains(github.event.head_commit.message, '[distribute app]') && vars.IOS_DISTRIBUTION_READY == 'true'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+
+      - name: Install signing certificate and provisioning profile
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CERTIFICATE_P12: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          set -euo pipefail
+
+          CERT_PATH="$RUNNER_TEMP/distribution_certificate.p12"
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+
+          echo "$CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+          echo "$PROVISIONING_PROFILE" | base64 --decode > "$PROFILE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$CERTIFICATE_PASSWORD" -A \
+            -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+
+          PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | plutil -extract Name xml1 -o - - | \
+            sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> "$GITHUB_ENV"
+
+      - name: Write export options
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>ad-hoc</string>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.ichsanindraw.receiptPrinter</key>
+              <string>${PROFILE_NAME}</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+
+      - run: >
+          flutter build ipa --release
+          --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Write Firebase service account key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+
+      - name: Distribute to Firebase App Distribution
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+          RELEASE_NOTES: ${{ github.event.head_commit.message }}
+        run: |
+          npm install -g firebase-tools@14
+          firebase appdistribution:distribute \
+            build/ios/ipa/*.ipa \
+            --app 1:636894790223:ios:505a9ff1566d35b8c0e03a \
+            --groups testers \
+            --release-notes "$RELEASE_NOTES" \
+            --project receipt-printer-ichsan
