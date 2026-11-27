@@ -9,13 +9,50 @@ import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import '../models/printer_settings.dart';
 import 'thermal_printer_service.dart';
 
+/// The calls [IoThermalPrinterService] makes into [PrintBluetoothThermal].
+///
+/// The plugin checks the host OS itself and quietly answers `false` on
+/// anything but Android, iOS, macOS and Windows, so stubbing its method
+/// channel does not work on a Linux CI runner. Tests subclass this instead.
+class BluetoothPrinterPlugin {
+  const BluetoothPrinterPlugin();
+
+  Future<bool> isPermissionGranted() =>
+      PrintBluetoothThermal.isPermissionBluetoothGranted;
+
+  Future<bool> isBluetoothEnabled() => PrintBluetoothThermal.bluetoothEnabled;
+
+  Future<List<PrinterDevice>> pairedDevices() async {
+    final devices = await PrintBluetoothThermal.pairedBluetooths;
+    return devices
+        .map(
+          (device) =>
+              PrinterDevice(name: device.name, address: device.macAdress),
+        )
+        .toList(growable: false);
+  }
+
+  Future<bool> isConnected() => PrintBluetoothThermal.connectionStatus;
+
+  Future<bool> connect(String address) =>
+      PrintBluetoothThermal.connect(macPrinterAddress: address);
+
+  Future<bool> writeBytes(List<int> bytes) =>
+      PrintBluetoothThermal.writeBytes(bytes);
+
+  Future<bool> disconnect() => PrintBluetoothThermal.disconnect;
+}
+
 /// Bluetooth ESC/POS over [PrintBluetoothThermal].
 class IoThermalPrinterService implements ThermalPrinterService {
-  /// [supported] overrides the host-platform check, so tests that stub the
-  /// plugin channel behave the same on a Linux CI runner as on a Mac.
-  IoThermalPrinterService({@visibleForTesting bool? supported})
-    : _supportedOverride = supported;
+  /// [plugin] and [supported] are for tests: a fake plugin, and an override
+  /// of the host-platform check, so the tests run the same on any OS.
+  IoThermalPrinterService({
+    this.plugin = const BluetoothPrinterPlugin(),
+    @visibleForTesting bool? supported,
+  }) : _supportedOverride = supported;
 
+  final BluetoothPrinterPlugin plugin;
   final bool? _supportedOverride;
 
   /// The plugin can say whether *a* connection is open but not to which
@@ -30,8 +67,8 @@ class IoThermalPrinterService implements ThermalPrinterService {
   @override
   Future<bool> isReady() async {
     if (!isSupported) return false;
-    if (!await PrintBluetoothThermal.isPermissionBluetoothGranted) return false;
-    return PrintBluetoothThermal.bluetoothEnabled;
+    if (!await plugin.isPermissionGranted()) return false;
+    return plugin.isBluetoothEnabled();
   }
 
   @override
@@ -44,19 +81,13 @@ class IoThermalPrinterService implements ThermalPrinterService {
 
     await _ensurePermission();
 
-    if (!await PrintBluetoothThermal.bluetoothEnabled) {
+    if (!await plugin.isBluetoothEnabled()) {
       throw const ThermalPrinterException(
         'Bluetooth mati. Nyalakan dulu, lalu coba lagi.',
       );
     }
 
-    final devices = await PrintBluetoothThermal.pairedBluetooths;
-    return devices
-        .map(
-          (device) =>
-              PrinterDevice(name: device.name, address: device.macAdress),
-        )
-        .toList(growable: false);
+    return plugin.pairedDevices();
   }
 
   @override
@@ -118,7 +149,7 @@ class IoThermalPrinterService implements ThermalPrinterService {
   Future<void> _write(List<int> bytes) async {
     var written = 0;
     for (final part in chunk(bytes)) {
-      final sent = await PrintBluetoothThermal.writeBytes(part);
+      final sent = await plugin.writeBytes(part);
       if (!sent) {
         // The link is unreliable once a write fails; force a fresh connect.
         _connectedAddress = null;
@@ -137,7 +168,7 @@ class IoThermalPrinterService implements ThermalPrinterService {
     _connectedAddress = null;
     if (!isSupported) return;
     try {
-      await PrintBluetoothThermal.disconnect;
+      await plugin.disconnect();
     } catch (_) {
       // Nothing useful to do if the channel is already gone.
     }
@@ -159,7 +190,7 @@ class IoThermalPrinterService implements ThermalPrinterService {
       return;
     }
 
-    if (!await PrintBluetoothThermal.isPermissionBluetoothGranted) {
+    if (!await plugin.isPermissionGranted()) {
       throw const ThermalPrinterException(
         'Izin Bluetooth belum diberikan. Aktifkan di pengaturan aplikasi.',
       );
@@ -167,22 +198,19 @@ class IoThermalPrinterService implements ThermalPrinterService {
   }
 
   Future<void> _ensureConnected(String address) async {
-    if (_connectedAddress == address &&
-        await PrintBluetoothThermal.connectionStatus) {
+    if (_connectedAddress == address && await plugin.isConnected()) {
       return;
     }
 
     // Drop a connection to a different printer before opening a new one.
     if (_connectedAddress != null) {
-      await PrintBluetoothThermal.disconnect;
+      await plugin.disconnect();
       _connectedAddress = null;
     }
 
     var connected = false;
     for (var attempt = 1; attempt <= _connectAttempts; attempt++) {
-      connected = await PrintBluetoothThermal.connect(
-        macPrinterAddress: address,
-      );
+      connected = await plugin.connect(address);
       if (connected || attempt == _connectAttempts) break;
       await Future<void>.delayed(_reconnectPause);
     }
