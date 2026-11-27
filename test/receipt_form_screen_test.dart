@@ -12,6 +12,36 @@ import 'support/fake_customer_history_service.dart';
 import 'support/fake_thermal_printer_service.dart';
 
 void main() {
+  testWidgets(
+    'phone masking is on by default and can be turned off on the form',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 2600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      PrinterSettings? changed;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: ReceiptFormScreen(
+              addressService: FakeAddressService(),
+              printerService: FakeThermalPrinterService(),
+              printerSettings: const PrinterSettings(),
+              onSettingsChanged: (settings) => changed = settings,
+              customerHistoryService: FakeCustomerHistoryService(),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Sembunyikan nomor HP di resi'), findsOneWidget);
+      await tester.tap(find.text('Sembunyikan nomor HP di resi'));
+      await tester.pump();
+
+      expect(changed?.maskPhoneNumbers, isFalse);
+    },
+  );
+
   Future<void> pumpScreen(
     WidgetTester tester, {
     required FakeCustomerHistoryService customerHistoryService,
@@ -27,6 +57,7 @@ void main() {
             addressService: FakeAddressService(),
             printerService: FakeThermalPrinterService(),
             printerSettings: const PrinterSettings(),
+            onSettingsChanged: (_) {},
             customerHistoryService: customerHistoryService,
           ),
         ),

@@ -60,6 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() => _printerSettings = settings);
   }
 
+  /// Applies and persists a change made from the form or the printer screen.
+  void _updatePrinterSettings(PrinterSettings settings) {
+    setState(() => _printerSettings = settings);
+    _settingsStore.save(settings);
+  }
+
   @override
   void dispose() {
     _printerService.disconnect();
@@ -75,10 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => PrinterSettingsScreen(
           settings: _printerSettings,
           printerService: _printerService,
-          onChanged: (settings) {
-            setState(() => _printerSettings = settings);
-            _settingsStore.save(settings);
-          },
+          onChanged: _updatePrinterSettings,
         ),
       ),
     );
@@ -200,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     addressService: _addressService,
                     printerService: _printerService,
                     printerSettings: _printerSettings,
+                    onSettingsChanged: _updatePrinterSettings,
                     customerHistoryService: _customerHistoryService,
                   ),
                   PrintImageScreen(

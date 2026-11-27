@@ -224,21 +224,6 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
               ),
             ],
           ),
-          AppCard(
-            title: 'Privasi',
-            children: [
-              _toggle(
-                context,
-                label: 'Sembunyikan nomor HP',
-                helper:
-                    'Cetak nomor HP dengan dua digit awal dan tiga digit '
-                    'akhir terlihat, misalnya 08******382.',
-                value: _settings.maskPhoneNumbers,
-                onChanged: (value) =>
-                    _update(_settings.copyWith(maskPhoneNumbers: value)),
-              ),
-            ],
-          ),
           AppButton(
             label: _testing ? 'Mengirim…' : 'Tes cetak',
             icon: Icons.print_outlined,

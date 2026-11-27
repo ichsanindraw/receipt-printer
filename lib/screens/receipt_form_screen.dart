@@ -29,6 +29,7 @@ class ReceiptFormScreen extends StatefulWidget {
     required this.addressService,
     required this.printerService,
     required this.printerSettings,
+    required this.onSettingsChanged,
     required this.customerHistoryService,
   });
 
@@ -38,6 +39,10 @@ class ReceiptFormScreen extends StatefulWidget {
   /// When a thermal printer is paired the receipt goes straight to it;
   /// otherwise printing falls back to the platform print dialog.
   final PrinterSettings printerSettings;
+
+  /// Called when a print option changed on this form (phone masking), so the
+  /// parent can persist it alongside the other printer settings.
+  final ValueChanged<PrinterSettings> onSettingsChanged;
 
   /// Local history of recipients who have ordered before, so a repeat order
   /// can be searched and applied to the form in one tap.
@@ -428,6 +433,20 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
                       keyboardType: TextInputType.phone,
                       validator: (v) => _validatePhone(v, 'No. HP penerima'),
                     ),
+                    const SizedBox(height: 12),
+                    _checkRow(
+                      context,
+                      label: 'Sembunyikan nomor HP di resi',
+                      value: widget.printerSettings.maskPhoneNumbers,
+                      onTap: _printing
+                          ? null
+                          : () => widget.onSettingsChanged(
+                              widget.printerSettings.copyWith(
+                                maskPhoneNumbers:
+                                    !widget.printerSettings.maskPhoneNumbers,
+                              ),
+                            ),
+                    ),
                   ],
                 ),
                 AppCard(
@@ -632,14 +651,28 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
     );
   }
 
-  Widget _saveToHistoryToggle(BuildContext context) {
+  Widget _saveToHistoryToggle(BuildContext context) => _checkRow(
+    context,
+    label: 'Simpan pelanggan ini ke riwayat',
+    value: _saveToHistory,
+    onTap: _printing
+        ? null
+        : () => setState(() => _saveToHistory = !_saveToHistory),
+  );
+
+  /// A checkbox with a label. Used for form options that sit inside a card
+  /// or below the form.
+  Widget _checkRow(
+    BuildContext context, {
+    required String label,
+    required bool value,
+    required VoidCallback? onTap,
+  }) {
     final theme = Theme.of(context);
     final palette = AppPalette.of(context);
 
     return GestureDetector(
-      onTap: _printing
-          ? null
-          : () => setState(() => _saveToHistory = !_saveToHistory),
+      onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Row(
         children: [
@@ -649,18 +682,14 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
             width: 18,
             height: 18,
             decoration: BoxDecoration(
-              color: _saveToHistory
-                  ? theme.colorScheme.primary
-                  : Colors.transparent,
+              color: value ? theme.colorScheme.primary : Colors.transparent,
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
-                color: _saveToHistory
-                    ? theme.colorScheme.primary
-                    : palette.hairline,
+                color: value ? theme.colorScheme.primary : palette.hairline,
                 width: 1.4,
               ),
             ),
-            child: _saveToHistory
+            child: value
                 ? Icon(
                     Icons.check_rounded,
                     size: 13,
@@ -669,12 +698,7 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
                 : null,
           ),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Simpan pelanggan ini ke riwayat',
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
+          Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
         ],
       ),
     );
