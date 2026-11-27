@@ -107,6 +107,55 @@ class SqliteCustomerHistoryService implements CustomerHistoryService {
     await db.delete(_table, where: 'id = ?', whereArgs: [id]);
   }
 
+  @override
+  Future<List<Customer>> all() async {
+    final db = await _database();
+    final rows = await db.query(_table, orderBy: 'last_ordered_at DESC');
+    return rows.map(_toCustomer).toList();
+  }
+
+  @override
+  Future<int> merge(List<Customer> customers) async {
+    final db = await _database();
+    var changed = 0;
+    await db.transaction((txn) async {
+      for (final incoming in customers) {
+        final rows = await txn.query(
+          _table,
+          where: 'phone = ?',
+          whereArgs: [incoming.phone],
+          limit: 1,
+        );
+        final merged = rows.isEmpty
+            ? incoming
+            : mergeCustomer(_toCustomer(rows.first), incoming);
+        final values = <String, Object?>{
+          'name': merged.name,
+          'phone': merged.phone,
+          'address': merged.address,
+          'products': merged.products.join('\n'),
+          'notes': merged.notes,
+          'latitude': merged.latitude,
+          'longitude': merged.longitude,
+          'last_ordered_at': merged.lastOrderedAt.toIso8601String(),
+          'order_count': merged.orderCount,
+        };
+        if (rows.isEmpty) {
+          await txn.insert(_table, values);
+        } else {
+          await txn.update(
+            _table,
+            values,
+            where: 'phone = ?',
+            whereArgs: [incoming.phone],
+          );
+        }
+        changed++;
+      }
+    });
+    return changed;
+  }
+
   Customer _toCustomer(Map<String, Object?> row) => Customer(
     id: row['id']! as int,
     name: row['name']! as String,

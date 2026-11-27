@@ -51,6 +51,37 @@ class InMemoryCustomerHistoryService implements CustomerHistoryService {
   Future<void> delete(int id) async {
     _byPhone.removeWhere((_, customer) => customer.id == id);
   }
+
+  @override
+  Future<List<Customer>> all() async {
+    return _byPhone.values.toList()
+      ..sort((a, b) => b.lastOrderedAt.compareTo(a.lastOrderedAt));
+  }
+
+  @override
+  Future<int> merge(List<Customer> customers) async {
+    var changed = 0;
+    for (final incoming in customers) {
+      final existing = _byPhone[incoming.phone];
+      final stored = existing == null
+          ? Customer(
+              id: _nextId++,
+              name: incoming.name,
+              phone: incoming.phone,
+              address: incoming.address,
+              products: incoming.products,
+              notes: incoming.notes,
+              latitude: incoming.latitude,
+              longitude: incoming.longitude,
+              lastOrderedAt: incoming.lastOrderedAt,
+              orderCount: incoming.orderCount,
+            )
+          : mergeCustomer(existing, incoming);
+      _byPhone[incoming.phone] = stored;
+      changed++;
+    }
+    return changed;
+  }
 }
 
 CustomerHistoryService createCustomerHistoryService() =>
