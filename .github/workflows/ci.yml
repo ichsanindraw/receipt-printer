@@ -13,6 +13,11 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Pinned to the version this project is developed and tested on.
+          # Newer stable releases raise the minimum Gradle/AGP versions and
+          # deprecate package:flutter/material.dart, which breaks the build.
+          # Bump deliberately, together with the local SDK.
+          flutter-version: 3.44.4
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze
