@@ -44,7 +44,7 @@ void main() {
     // fail outright, and only a subsequent attempt (e.g. "Tes cetak")
     // would succeed.
     stubChannel(connectResults: [false, true]);
-    final service = IoThermalPrinterService();
+    final service = IoThermalPrinterService(supported: true);
 
     await service.printBytes([1, 2, 3], address: '00:11:22:33:44:55');
     // No exception means the retry rescued the first failed connect.
@@ -52,7 +52,7 @@ void main() {
 
   test('a connect that fails every attempt still surfaces an error', () async {
     stubChannel(connectResults: [false, false]);
-    final service = IoThermalPrinterService();
+    final service = IoThermalPrinterService(supported: true);
 
     await expectLater(
       () => service.printBytes([1, 2, 3], address: '00:11:22:33:44:55'),
@@ -77,7 +77,7 @@ void main() {
       }
     });
 
-    final service = IoThermalPrinterService();
+    final service = IoThermalPrinterService(supported: true);
     await service.printBytes([1, 2, 3], address: '00:11:22:33:44:55');
 
     expect(connectCalls, 1);

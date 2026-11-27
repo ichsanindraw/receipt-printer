@@ -11,7 +11,12 @@ import 'thermal_printer_service.dart';
 
 /// Bluetooth ESC/POS over [PrintBluetoothThermal].
 class IoThermalPrinterService implements ThermalPrinterService {
-  IoThermalPrinterService();
+  /// [supported] overrides the host-platform check, so tests that stub the
+  /// plugin channel behave the same on a Linux CI runner as on a Mac.
+  IoThermalPrinterService({@visibleForTesting bool? supported})
+    : _supportedOverride = supported;
+
+  final bool? _supportedOverride;
 
   /// The plugin can say whether *a* connection is open but not to which
   /// device, so the address is tracked here to detect a switch of printer.
@@ -19,7 +24,8 @@ class IoThermalPrinterService implements ThermalPrinterService {
 
   @override
   bool get isSupported =>
-      Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+      _supportedOverride ??
+      (Platform.isAndroid || Platform.isIOS || Platform.isMacOS);
 
   @override
   Future<bool> isReady() async {
