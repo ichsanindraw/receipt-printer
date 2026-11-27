@@ -231,8 +231,8 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                 context,
                 label: 'Sembunyikan nomor HP',
                 helper:
-                    'Cetak nomor HP dengan hanya dua digit awal terlihat, '
-                    'misalnya 08**********.',
+                    'Cetak nomor HP dengan dua digit awal dan empat digit '
+                    'akhir terlihat, misalnya 08*****9382.',
                 value: _settings.maskPhoneNumbers,
                 onChanged: (value) =>
                     _update(_settings.copyWith(maskPhoneNumbers: value)),

@@ -84,14 +84,25 @@ class Receipt {
     longitude: longitude,
   );
 
-  /// Keeps the first two digits and replaces every other digit with `*`,
-  /// so `0813 1369 382` becomes `08** **** ***`. Spaces, dashes and other
-  /// separators stay where they were.
+  /// Digits shown from the start and end of a masked number.
+  static const int maskVisiblePrefix = 2;
+  static const int maskVisibleSuffix = 4;
+
+  /// Numbers shorter than this show only the prefix, so a short number
+  /// is not mostly visible.
+  static const int maskMinDigitsForSuffix = 10;
+
+  /// Keeps the first two and last four digits and replaces the rest with `*`,
+  /// so `0813 1369 382` becomes `08*** **** 9382`-style output. Spaces, dashes
+  /// and other separators stay where they were.
   static String maskPhone(String phone) {
-    var digitsSeen = 0;
+    final total = RegExp(r'\d').allMatches(phone).length;
+    final suffix = total >= maskMinDigitsForSuffix ? maskVisibleSuffix : 0;
+    var index = 0;
     return phone.replaceAllMapped(RegExp(r'\d'), (match) {
-      digitsSeen++;
-      return digitsSeen <= 2 ? match[0]! : '*';
+      final i = index++;
+      final visible = i < maskVisiblePrefix || i >= total - suffix;
+      return visible ? match[0]! : '*';
     });
   }
 
