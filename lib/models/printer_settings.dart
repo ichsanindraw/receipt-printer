@@ -40,7 +40,7 @@ class PrinterSettings {
   /// it, but some older ones misbehave, so it can be turned off.
   final bool cutPaper;
 
-  /// Print phone numbers masked (e.g. `08*****9382`) so the paper does not
+  /// Print phone numbers masked (e.g. `08******382`) so the paper does not
   /// expose the full number. Applies to every printed receipt; the saved
   /// customer history always keeps the full number.
   final bool maskPhoneNumbers;

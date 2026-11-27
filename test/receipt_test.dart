@@ -26,8 +26,8 @@ void main() {
     });
 
     test('maskPhone keeps two digits and keeps separators', () {
-      expect(Receipt.maskPhone('08131369382'), '08*****9382');
-      expect(Receipt.maskPhone('0812 3456 7890'), '08** **** 7890');
+      expect(Receipt.maskPhone('08131369382'), '08******382');
+      expect(Receipt.maskPhone('0812 3456 7890'), '08** **** *890');
       // Under 10 digits: only the prefix stays visible.
       expect(Receipt.maskPhone('+62 812-3456'), '+62 ***-****');
       expect(Receipt.maskPhone('08'), '08');
@@ -48,8 +48,8 @@ void main() {
 
       final masked = receipt.withMaskedPhones();
 
-      expect(masked.fromPhone, '08*****9382');
-      expect(masked.toPhone, '08** **** 6500');
+      expect(masked.fromPhone, '08******382');
+      expect(masked.toPhone, '08** **** *500');
       expect(masked.to, 'Budi');
       expect(masked.address, 'Jl. Contoh 1');
       expect(masked.products, const ['Kopi']);
