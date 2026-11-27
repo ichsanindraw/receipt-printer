@@ -25,6 +25,7 @@ class PrinterSettings {
     this.paperWidth = PaperWidth.mm80,
     this.copies = 1,
     this.cutPaper = true,
+    this.maskPhoneNumbers = true,
   });
 
   final String? deviceName;
@@ -39,6 +40,11 @@ class PrinterSettings {
   /// it, but some older ones misbehave, so it can be turned off.
   final bool cutPaper;
 
+  /// Print phone numbers masked (e.g. `08**********`) so the paper does not
+  /// expose the full number. Applies to every printed receipt; the saved
+  /// customer history always keeps the full number.
+  final bool maskPhoneNumbers;
+
   bool get hasDevice => deviceAddress != null && deviceAddress!.isNotEmpty;
 
   PrinterSettings copyWith({
@@ -47,6 +53,7 @@ class PrinterSettings {
     PaperWidth? paperWidth,
     int? copies,
     bool? cutPaper,
+    bool? maskPhoneNumbers,
   }) {
     return PrinterSettings(
       deviceName: deviceName ?? this.deviceName,
@@ -54,6 +61,7 @@ class PrinterSettings {
       paperWidth: paperWidth ?? this.paperWidth,
       copies: copies ?? this.copies,
       cutPaper: cutPaper ?? this.cutPaper,
+      maskPhoneNumbers: maskPhoneNumbers ?? this.maskPhoneNumbers,
     );
   }
 
@@ -62,6 +70,7 @@ class PrinterSettings {
     paperWidth: paperWidth,
     copies: copies,
     cutPaper: cutPaper,
+    maskPhoneNumbers: maskPhoneNumbers,
   );
 
   Map<String, dynamic> toJson() => {
@@ -70,6 +79,7 @@ class PrinterSettings {
     'paperWidth': paperWidth.name,
     'copies': copies,
     'cutPaper': cutPaper,
+    'maskPhoneNumbers': maskPhoneNumbers,
   };
 
   factory PrinterSettings.fromJson(Map<String, dynamic> json) {
@@ -79,6 +89,9 @@ class PrinterSettings {
       paperWidth: PaperWidth.fromName(json['paperWidth'] as String?),
       copies: (json['copies'] as num?)?.toInt().clamp(1, 5) ?? 1,
       cutPaper: json['cutPaper'] as bool? ?? true,
+      // Missing on settings saved before this option existed: default to
+      // masked, the safe choice.
+      maskPhoneNumbers: json['maskPhoneNumbers'] as bool? ?? true,
     );
   }
 

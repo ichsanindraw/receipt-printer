@@ -74,8 +74,9 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       _error = null;
     });
     try {
+      final sample = _sampleReceipt();
       final bytes = await _escPosService.build(
-        _sampleReceipt(),
+        _settings.maskPhoneNumbers ? sample.withMaskedPhones() : sample,
         paperWidth: _settings.paperWidth,
       );
       await widget.printerService.printBytes(
@@ -220,6 +221,21 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                 value: _settings.cutPaper,
                 onChanged: (value) =>
                     _update(_settings.copyWith(cutPaper: value)),
+              ),
+            ],
+          ),
+          AppCard(
+            title: 'Privasi',
+            children: [
+              _toggle(
+                context,
+                label: 'Sembunyikan nomor HP',
+                helper:
+                    'Cetak nomor HP dengan hanya dua digit awal terlihat, '
+                    'misalnya 08**********.',
+                value: _settings.maskPhoneNumbers,
+                onChanged: (value) =>
+                    _update(_settings.copyWith(maskPhoneNumbers: value)),
               ),
             ],
           ),

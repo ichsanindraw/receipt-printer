@@ -25,6 +25,37 @@ void main() {
       expect(sample().formattedIssuedAt, '09 Sep 2026, 14:32');
     });
 
+    test('maskPhone keeps two digits and keeps separators', () {
+      expect(Receipt.maskPhone('08131369382'), '08*********');
+      expect(Receipt.maskPhone('0812 3456 7890'), '08** **** ****');
+      expect(Receipt.maskPhone('+62 812-3456'), '+62 ***-****');
+      expect(Receipt.maskPhone('08'), '08');
+      expect(Receipt.maskPhone(''), '');
+    });
+
+    test('withMaskedPhones masks only the phone numbers', () {
+      final receipt = Receipt(
+        number: 'RCP-1',
+        from: 'Seanite',
+        fromPhone: '08131369382',
+        to: 'Budi',
+        toPhone: '0895 3735 6500',
+        products: const ['Kopi'],
+        address: 'Jl. Contoh 1',
+        issuedAt: DateTime(2026, 11, 27),
+      );
+
+      final masked = receipt.withMaskedPhones();
+
+      expect(masked.fromPhone, '08*********');
+      expect(masked.toPhone, '08** **** ****');
+      expect(masked.to, 'Budi');
+      expect(masked.address, 'Jl. Contoh 1');
+      expect(masked.products, const ['Kopi']);
+      // The original keeps the full number for the customer history.
+      expect(receipt.toPhone, '0895 3735 6500');
+    });
+
     test('notes default to an empty string when not supplied', () {
       expect(sample().notes, isEmpty);
     });

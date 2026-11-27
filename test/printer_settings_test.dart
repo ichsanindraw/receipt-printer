@@ -10,6 +10,24 @@ void main() {
       expect(settings.paperWidth, PaperWidth.mm80);
       expect(settings.copies, 1);
       expect(settings.cutPaper, isTrue);
+      expect(settings.maskPhoneNumbers, isTrue);
+    });
+
+    test(
+      'phone masking is on for settings saved before the option existed',
+      () {
+        final restored = PrinterSettings.decode('{"copies": 2}');
+
+        expect(restored.maskPhoneNumbers, isTrue);
+      },
+    );
+
+    test('a turned-off phone masking survives a JSON round trip', () {
+      const settings = PrinterSettings(maskPhoneNumbers: false);
+
+      final restored = PrinterSettings.decode(settings.encode());
+
+      expect(restored.maskPhoneNumbers, isFalse);
     });
 
     test('survives a JSON round trip', () {

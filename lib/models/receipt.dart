@@ -68,6 +68,33 @@ class Receipt {
       ? '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}'
       : '';
 
+  /// A copy with both phone numbers masked for printing. The original is
+  /// left alone, so the customer history still stores the full number.
+  Receipt withMaskedPhones() => Receipt(
+    number: number,
+    from: from,
+    fromPhone: maskPhone(fromPhone),
+    to: to,
+    toPhone: maskPhone(toPhone),
+    products: products,
+    address: address,
+    issuedAt: issuedAt,
+    notes: notes,
+    latitude: latitude,
+    longitude: longitude,
+  );
+
+  /// Keeps the first two digits and replaces every other digit with `*`,
+  /// so `0813 1369 382` becomes `08** **** ***`. Spaces, dashes and other
+  /// separators stay where they were.
+  static String maskPhone(String phone) {
+    var digitsSeen = 0;
+    return phone.replaceAllMapped(RegExp(r'\d'), (match) {
+      digitsSeen++;
+      return digitsSeen <= 2 ? match[0]! : '*';
+    });
+  }
+
   /// A sensible default receipt number based on the current time.
   static String generateNumber([DateTime? now]) {
     final stamp = DateFormat('yyyyMMdd-HHmm').format(now ?? DateTime.now());

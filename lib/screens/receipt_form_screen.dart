@@ -169,12 +169,18 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
     }
   }
 
+  /// The receipt as it should appear on paper or in the preview: phone numbers
+  /// masked when the printer setting is on. History keeps the unmasked copy.
+  Receipt _printable(Receipt receipt) => widget.printerSettings.maskPhoneNumbers
+      ? receipt.withMaskedPhones()
+      : receipt;
+
   Future<void> _printToThermal(
     Receipt receipt,
     PrinterSettings settings,
   ) async {
     final bytes = await _escPosService.build(
-      receipt,
+      _printable(receipt),
       paperWidth: settings.paperWidth,
     );
     await widget.printerService.printBytes(
@@ -188,10 +194,11 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
   }
 
   Future<void> _printToSystemDialog(Receipt receipt) async {
+    final printable = _printable(receipt);
     await Printing.layoutPdf(
-      name: receipt.fileLabel,
+      name: printable.fileLabel,
       format: ReceiptPdfService.pageFormat,
-      onLayout: (format) => _pdfService.build(receipt),
+      onLayout: (format) => _pdfService.build(printable),
     );
   }
 
@@ -199,7 +206,8 @@ class _ReceiptFormScreenState extends State<ReceiptFormScreen>
     if (!_validate()) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ReceiptPreviewScreen(receipt: _buildReceipt()),
+        builder: (_) =>
+            ReceiptPreviewScreen(receipt: _printable(_buildReceipt())),
       ),
     );
   }
