@@ -34,4 +34,13 @@ class FakeCustomerHistoryService implements CustomerHistoryService {
   Future<void> delete(int id) async {
     _customers.removeWhere((customer) => customer.id == id);
   }
+
+  @override
+  Future<List<Customer>> all() async => List.of(_customers);
+
+  @override
+  Future<int> merge(List<Customer> customers) async {
+    _customers.addAll(customers);
+    return customers.length;
+  }
 }

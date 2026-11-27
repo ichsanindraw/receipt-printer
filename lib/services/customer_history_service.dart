@@ -26,6 +26,40 @@ abstract class CustomerHistoryService {
 
   /// Removes a customer from the history, e.g. after a typo.
   Future<void> delete(int id);
+
+  /// Every stored customer, most recently ordered first. Used for backup.
+  Future<List<Customer>> all();
+
+  /// Merges [customers] from a backup into the history, keyed by phone.
+  /// A new phone is added. A phone already stored keeps whichever record
+  /// was ordered most recently, and its order count becomes the higher of
+  /// the two, so restoring twice does not double-count. Returns how many
+  /// customers were added or updated.
+  Future<int> merge(List<Customer> customers);
+}
+
+/// Merge rule shared by both implementations: the newer order wins the
+/// details, and the larger order count wins the count.
+Customer mergeCustomer(Customer existing, Customer incoming) {
+  final incomingIsNewer = incoming.lastOrderedAt.isAfter(
+    existing.lastOrderedAt,
+  );
+  final newer = incomingIsNewer ? incoming : existing;
+  final orderCount = incoming.orderCount > existing.orderCount
+      ? incoming.orderCount
+      : existing.orderCount;
+  return Customer(
+    id: existing.id,
+    name: newer.name,
+    phone: existing.phone,
+    address: newer.address,
+    products: newer.products,
+    notes: newer.notes,
+    latitude: newer.latitude,
+    longitude: newer.longitude,
+    lastOrderedAt: newer.lastOrderedAt,
+    orderCount: orderCount,
+  );
 }
 
 CustomerHistoryService createCustomerHistoryService() =>

@@ -9,6 +9,7 @@ import '../services/printer_settings_store.dart';
 import '../services/shipping_rate_service_factory.dart';
 import '../services/thermal_printer_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/backup_sheet.dart';
 import '../widgets/segmented_tabs.dart';
 import 'print_image_screen.dart';
 import 'printer_settings_screen.dart';
@@ -122,6 +123,27 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
+                      GestureDetector(
+                        onTap: () =>
+                            BackupSheet.show(context, _customerHistoryService),
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: palette.hairline),
+                          ),
+                          child: Icon(
+                            Icons.backup_outlined,
+                            size: 20,
+                            color: palette.inkMuted,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       GestureDetector(
                         onTap: _openPrinterSettings,
                         behavior: HitTestBehavior.opaque,

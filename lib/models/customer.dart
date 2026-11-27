@@ -36,6 +36,35 @@ class Customer {
 
   bool get hasCoordinates => latitude != null && longitude != null;
 
+  /// Backup form. The local [id] is left out: it is only meaningful inside
+  /// the database that assigned it, and a restore assigns fresh ids.
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'phone': phone,
+    'address': address,
+    'products': products,
+    'notes': notes,
+    'latitude': latitude,
+    'longitude': longitude,
+    'lastOrderedAt': lastOrderedAt.toIso8601String(),
+    'orderCount': orderCount,
+  };
+
+  /// Reads the backup form. Throws [FormatException] or [TypeError] when a
+  /// required field is missing or malformed.
+  factory Customer.fromJson(Map<String, dynamic> json) => Customer(
+    id: 0,
+    name: json['name'] as String,
+    phone: json['phone'] as String,
+    address: json['address'] as String,
+    products: (json['products'] as List<dynamic>).cast<String>(),
+    notes: json['notes'] as String? ?? '',
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
+    lastOrderedAt: DateTime.parse(json['lastOrderedAt'] as String),
+    orderCount: json['orderCount'] as int? ?? 1,
+  );
+
   String get productSummary => products.join(', ');
 
   String get formattedLastOrderedAt =>
