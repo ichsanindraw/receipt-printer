@@ -7,7 +7,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const channel = MethodChannel('groons.web.app/print');
-  final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
 
@@ -35,25 +36,19 @@ void main() {
     });
   }
 
-  test(
-    'a first connect that fails is retried automatically, so the very '
-    'first print still goes through without a separate test print',
-    () async {
-      // Regression: Android's classic Bluetooth socket routinely fails the
-      // very first connect to an otherwise healthy, paired printer. Without
-      // a retry, this made the first "Cetak resi" after picking a printer
-      // fail outright, and only a subsequent attempt (e.g. "Tes cetak")
-      // would succeed.
-      stubChannel(connectResults: [false, true]);
-      final service = IoThermalPrinterService();
+  test('a first connect that fails is retried automatically, so the very '
+      'first print still goes through without a separate test print', () async {
+    // Regression: Android's classic Bluetooth socket routinely fails the
+    // very first connect to an otherwise healthy, paired printer. Without
+    // a retry, this made the first "Cetak resi" after picking a printer
+    // fail outright, and only a subsequent attempt (e.g. "Tes cetak")
+    // would succeed.
+    stubChannel(connectResults: [false, true]);
+    final service = IoThermalPrinterService();
 
-      await service.printBytes(
-        [1, 2, 3],
-        address: '00:11:22:33:44:55',
-      );
-      // No exception means the retry rescued the first failed connect.
-    },
-  );
+    await service.printBytes([1, 2, 3], address: '00:11:22:33:44:55');
+    // No exception means the retry rescued the first failed connect.
+  });
 
   test('a connect that fails every attempt still surfaces an error', () async {
     stubChannel(connectResults: [false, false]);
